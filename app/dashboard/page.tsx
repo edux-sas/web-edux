@@ -8,44 +8,175 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { User, BarChart3, Info, GraduationCap, Zap, Heart, Shield, Brain } from "lucide-react"
+import { User, BarChart3, Info, GraduationCap, Zap, Heart, Shield, Brain, Clock } from "lucide-react"
+import { getCurrentUser, getDiscResults } from "@/lib/supabase"
+import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
 
 type UserData = {
+  id?: string
   name: string
   email: string
   isLoggedIn: boolean
+}
+
+type DiscResultData = {
+  d: number
+  i: number
+  s: number
+  c: number
+  created_at: string
 }
 
 export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [discResults, setDiscResults] = useState<DiscResultData | null>(null)
+  const [canTakeTest, setCanTakeTest] = useState(true)
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem("eduXUser")
+    // Función para cargar los datos del usuario y resultados DISC
+    const loadUserData = async () => {
+      setIsLoading(true)
 
-    if (userData) {
-      setUser(JSON.parse(userData))
-    } else {
-      router.push("/iniciar-sesion")
+      // Verificar si hay un usuario en localStorage
+      const storedUser = localStorage.getItem("eduXUser")
+      let userData: UserData | null = null
+
+      if (storedUser) {
+        try {
+          userData = JSON.parse(storedUser)
+          setUser(userData)
+
+          // Si el usuario tiene ID, intentar obtener sus resultados DISC
+          if (userData.id) {
+            const { success, results } = await getDiscResults(userData.id)
+
+            if (success && results) {
+              setDiscResults({
+                d: results.d,
+                i: results.i,
+                s: results.s,
+                c: results.c,
+                created_at: results.created_at || new Date().toISOString(),
+              })
+
+              // Verificar si puede realizar el test nuevamente
+              const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
+              setCanTakeTest(canTake)
+
+              if (!canTake && remaining) {
+                setTimeRemaining(formatTimeRemaining(remaining))
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing user data", e)
+        }
+      }
+
+      // Si no hay usuario en localStorage, intentar obtenerlo de Supabase
+      if (!userData) {
+        const { success, user: supabaseUser } = await getCurrentUser()
+
+        if (success && supabaseUser) {
+          const newUserData = {
+            id: supabaseUser.id,
+            name: supabaseUser.user_metadata?.name || "Usuario",
+            email: supabaseUser.email || "",
+            isLoggedIn: true,
+          }
+
+          setUser(newUserData)
+          localStorage.setItem("eduXUser", JSON.stringify(newUserData))
+
+          // Intentar obtener resultados DISC
+          const { success: discSuccess, results } = await getDiscResults(supabaseUser.id)
+
+          if (discSuccess && results) {
+            setDiscResults({
+              d: results.d,
+              i: results.i,
+              s: results.s,
+              c: results.c,
+              created_at: results.created_at || new Date().toISOString(),
+            })
+
+            // Verificar si puede realizar el test nuevamente
+            const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
+            setCanTakeTest(canTake)
+
+            if (!canTake && remaining) {
+              setTimeRemaining(formatTimeRemaining(remaining))
+            }
+          }
+        } else {
+          // No hay usuario autenticado, redirigir a login
+          router.push("/iniciar-sesion")
+        }
+      }
+
+      setIsLoading(false)
     }
 
-    setIsLoading(false)
+    loadUserData()
+
+    // Configurar un intervalo para actualizar el contador
+    const interval = setInterval(() => {
+      if (discResults?.created_at) {
+        const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(discResults.created_at)
+        setCanTakeTest(canTake)
+
+        if (!canTake && remaining) {
+          setTimeRemaining(formatTimeRemaining(remaining))
+        } else if (canTake) {
+          setTimeRemaining(null)
+        }
+      }
+    }, 60000) // Actualizar cada minuto
+
+    setCountdown(interval)
+
+    return () => {
+      if (countdown) {
+        clearInterval(countdown)
+      }
+    }
   }, [router])
 
-  // Sample DISC test results data
-  const discTestData = {
-    completed: true,
-    plan: "Profesional",
-    date: "15/05/2023",
-    profile: "Influencia",
-    scores: {
-      D: 3,
-      I: 5,
-      S: 2,
-      C: 2,
-    },
+  // Determinar el perfil dominante
+  const getDominantProfile = () => {
+    if (!discResults) return null
+
+    const profiles = [
+      { type: "D", value: discResults.d, name: "Dominancia" },
+      { type: "I", value: discResults.i, name: "Influencia" },
+      { type: "S", value: discResults.s, name: "Estabilidad" },
+      { type: "C", value: discResults.c, name: "Concienzudo" },
+    ]
+
+    profiles.sort((a, b) => b.value - a.value)
+    return profiles[0]
+  }
+
+  const dominantProfile = getDominantProfile()
+
+  // Función para obtener el icono según el tipo de perfil
+  const getProfileIcon = (type: string) => {
+    switch (type) {
+      case "D":
+        return <Zap className="h-5 w-5 text-blue-500" />
+      case "I":
+        return <Heart className="h-5 w-5 text-yellow-500" />
+      case "S":
+        return <Shield className="h-5 w-5 text-green-500" />
+      case "C":
+        return <Brain className="h-5 w-5 text-orange-500" />
+      default:
+        return <Info className="h-5 w-5 text-primary" />
+    }
   }
 
   if (isLoading) {
@@ -84,22 +215,30 @@ export default function DashboardPage() {
           </TabsList>
 
           <TabsContent value="disc" className="space-y-6">
-            {discTestData.completed ? (
+            {discResults ? (
               <Card>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle>Resultados Test DISC</CardTitle>
-                    <Badge>{discTestData.plan}</Badge>
+                    <Badge>Profesional</Badge>
                   </div>
-                  <CardDescription>Test completado el {discTestData.date}</CardDescription>
+                  <CardDescription>
+                    Test completado el {new Date(discResults.created_at).toLocaleDateString()}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
                     <div>
-                      <h3 className="text-lg font-semibold mb-2">Tu perfil dominante: {discTestData.profile}</h3>
+                      <h3 className="text-lg font-semibold mb-2">Tu perfil dominante: {dominantProfile?.name}</h3>
                       <p className="text-muted-foreground">
-                        Tu perfil DISC muestra una tendencia dominante hacia la Influencia, lo que indica que eres
-                        sociable, persuasivo y entusiasta.
+                        {dominantProfile?.type === "I" &&
+                          "Tu perfil DISC muestra una tendencia dominante hacia la Influencia, lo que indica que eres sociable, persuasivo y entusiasta."}
+                        {dominantProfile?.type === "D" &&
+                          "Tu perfil DISC muestra una tendencia dominante hacia la Dominancia, lo que indica que eres directo, decisivo y orientado a resultados."}
+                        {dominantProfile?.type === "S" &&
+                          "Tu perfil DISC muestra una tendencia dominante hacia la Estabilidad, lo que indica que eres paciente, leal y cooperativo."}
+                        {dominantProfile?.type === "C" &&
+                          "Tu perfil DISC muestra una tendencia dominante hacia el perfil Concienzudo, lo que indica que eres analítico, preciso y sistemático."}
                       </p>
                     </div>
 
@@ -108,28 +247,28 @@ export default function DashboardPage() {
                         <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-2">
                           <Zap className="h-5 w-5 text-blue-500" />
                         </div>
-                        <div className="text-xl font-bold">{discTestData.scores.D}</div>
+                        <div className="text-xl font-bold">{discResults.d}</div>
                         <div className="text-sm text-muted-foreground">Dominancia</div>
                       </div>
                       <div className="flex flex-col items-center">
                         <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center mb-2">
                           <Heart className="h-5 w-5 text-yellow-500" />
                         </div>
-                        <div className="text-xl font-bold">{discTestData.scores.I}</div>
+                        <div className="text-xl font-bold">{discResults.i}</div>
                         <div className="text-sm text-muted-foreground">Influencia</div>
                       </div>
                       <div className="flex flex-col items-center">
                         <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-2">
                           <Shield className="h-5 w-5 text-green-500" />
                         </div>
-                        <div className="text-xl font-bold">{discTestData.scores.S}</div>
+                        <div className="text-xl font-bold">{discResults.s}</div>
                         <div className="text-sm text-muted-foreground">Estabilidad</div>
                       </div>
                       <div className="flex flex-col items-center">
                         <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mb-2">
                           <Brain className="h-5 w-5 text-orange-500" />
                         </div>
-                        <div className="text-xl font-bold">{discTestData.scores.C}</div>
+                        <div className="text-xl font-bold">{discResults.c}</div>
                         <div className="text-sm text-muted-foreground">Concienzudo</div>
                       </div>
                     </div>
@@ -137,9 +276,14 @@ export default function DashboardPage() {
                     <div className="bg-muted/30 p-4 rounded-lg">
                       <h4 className="font-medium mb-2">Aplicación práctica</h4>
                       <p className="text-sm text-muted-foreground">
-                        Con tu perfil de Influencia, destacas en entornos sociales y de comunicación. Aprovecha tus
-                        habilidades para motivar a otros, generar entusiasmo en proyectos y crear conexiones. Trabaja en
-                        mantener el enfoque en los detalles y la organización.
+                        {dominantProfile?.type === "I" &&
+                          "Con tu perfil de Influencia, destacas en entornos sociales y de comunicación. Aprovecha tus habilidades para motivar a otros, generar entusiasmo en proyectos y crear conexiones. Trabaja en mantener el enfoque en los detalles y la organización."}
+                        {dominantProfile?.type === "D" &&
+                          "Con tu perfil de Dominancia, destacas en entornos competitivos y orientados a resultados. Aprovecha tus habilidades para tomar decisiones rápidas, enfrentar desafíos y liderar proyectos. Trabaja en desarrollar paciencia y escucha activa."}
+                        {dominantProfile?.type === "S" &&
+                          "Con tu perfil de Estabilidad, destacas en entornos colaborativos y de apoyo. Aprovecha tus habilidades para mantener la armonía, trabajar en equipo y ser consistente. Trabaja en adaptarte a los cambios y ser más asertivo."}
+                        {dominantProfile?.type === "C" &&
+                          "Con tu perfil Concienzudo, destacas en entornos que requieren precisión y análisis. Aprovecha tus habilidades para resolver problemas complejos, atender detalles y mantener altos estándares. Trabaja en ser más flexible y expresar tus ideas."}
                       </p>
                     </div>
                   </div>
@@ -148,9 +292,16 @@ export default function DashboardPage() {
                   <Button variant="outline" asChild>
                     <Link href="/test-disc/results">Ver informe completo</Link>
                   </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/test-disc/start">Realizar nuevamente</Link>
-                  </Button>
+                  {canTakeTest ? (
+                    <Button variant="outline" asChild>
+                      <Link href="/test-disc/start">Realizar nuevamente</Link>
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Disponible en {timeRemaining}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ) : (

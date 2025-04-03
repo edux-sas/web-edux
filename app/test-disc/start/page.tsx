@@ -1,11 +1,16 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Clock, AlertCircle } from "lucide-react"
+import { getCurrentUser, getDiscResults } from "@/lib/supabase"
+import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
+import Link from "next/link"
 
 // Palabras para el test DISC
 const palabras = [
@@ -62,6 +67,65 @@ export default function TestDiscStart() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [userId, setUserId] = useState<string | null>(null)
+  const [canTakeTest, setCanTakeTest] = useState(true)
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null)
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(true)
+
+  // Verificar si el usuario puede realizar el test
+  useEffect(() => {
+    const checkEligibility = async () => {
+      setIsCheckingEligibility(true)
+
+      // Intentar obtener el usuario del localStorage primero
+      const storedUser = localStorage.getItem("eduXUser")
+      let currentUserId = null
+
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          if (userData.id) {
+            currentUserId = userData.id
+            setUserId(userData.id)
+          }
+        } catch (e) {
+          console.error("Error parsing user data", e)
+        }
+      }
+
+      // Si no hay usuario en localStorage, intentar obtenerlo de Supabase
+      if (!currentUserId) {
+        const { success, user } = await getCurrentUser()
+        if (success && user) {
+          currentUserId = user.id
+          setUserId(user.id)
+        } else {
+          // No hay usuario autenticado, redirigir a login
+          router.push("/iniciar-sesion")
+          return
+        }
+      }
+
+      // Verificar si el usuario ya ha realizado un test
+      if (currentUserId) {
+        const { success, results } = await getDiscResults(currentUserId)
+
+        if (success && results && results.created_at) {
+          // Verificar si puede realizar el test nuevamente
+          const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
+          setCanTakeTest(canTake)
+
+          if (!canTake && remaining) {
+            setTimeRemaining(formatTimeRemaining(remaining))
+          }
+        }
+      }
+
+      setIsCheckingEligibility(false)
+    }
+
+    checkEligibility()
+  }, [router])
 
   const handleSelectionChange = (tipo, index) => {
     setSelecciones((prevSelecciones) => ({
@@ -134,6 +198,11 @@ export default function TestDiscStart() {
       // Guardar resultados en localStorage para la página de resultados
       localStorage.setItem("discResults", JSON.stringify(results))
 
+      // Guardar el ID del usuario si está disponible
+      if (userId) {
+        localStorage.setItem("discUserId", userId)
+      }
+
       // Redirigir a la página de resultados
       router.push("/test-disc/results")
     } catch (error) {
@@ -146,6 +215,52 @@ export default function TestDiscStart() {
 
   const grupoPalabrasActual = palabras[indiceGrupoActual]
   const progreso = ((indiceGrupoActual + 1) / palabras.length) * 100
+
+  if (isCheckingEligibility) {
+    return (
+      <div className="container py-12 text-center">
+        <h1 className="text-2xl font-bold mb-4">Verificando elegibilidad</h1>
+        <p className="text-muted-foreground mb-6">
+          Por favor espera mientras verificamos si puedes realizar el test...
+        </p>
+        <div className="flex justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!canTakeTest) {
+    return (
+      <div className="container py-12 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle>Test DISC no disponible</CardTitle>
+            <CardDescription>Debes esperar antes de poder realizar el test nuevamente</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="warning" className="mb-6">
+              <Clock className="h-4 w-4" />
+              <AlertTitle>Tiempo de espera</AlertTitle>
+              <AlertDescription>
+                Para mantener la precisión de los resultados, debes esperar {timeRemaining} antes de poder realizar el
+                test nuevamente.
+              </AlertDescription>
+            </Alert>
+            <p className="text-muted-foreground">Puedes revisar tus resultados anteriores mientras tanto.</p>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" asChild>
+              <Link href="/dashboard">Volver al Dashboard</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/test-disc/results">Ver resultados anteriores</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="container py-12 max-w-2xl">
@@ -163,7 +278,12 @@ export default function TestDiscStart() {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
             <div className="grid grid-cols-1 gap-4">
               {grupoPalabrasActual.map((palabra, index) => (

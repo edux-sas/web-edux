@@ -25,6 +25,7 @@ import {
 import { motion } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import dynamic from "next/dynamic"
+import { saveDiscResults, getDiscResults } from "@/lib/supabase"
 
 // Importación dinámica para evitar errores de SSR
 const html2canvasModule = dynamic(() => import("html2canvas"), {
@@ -409,41 +410,113 @@ export default function ResultsPage() {
   const [analysisDescription, setAnalysisDescription] = useState<string>("")
   const [userName, setUserName] = useState<string>("Usuario")
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isSavingResults, setSavingResults] = useState(false)
+  const [resultsSaved, setResultsSaved] = useState(false)
   const resultRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
-    // Recuperar resultados del localStorage
-    const storedResults = localStorage.getItem("discResults")
-    const storedUser = localStorage.getItem("eduXUser")
+    // Función para cargar los resultados
+    const loadResults = async () => {
+      // Recuperar usuario del localStorage
+      const storedUser = localStorage.getItem("eduXUser")
+      let userId: string | null = null
 
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser)
-        if (userData.name) {
-          setUserName(userData.name.split(" ")[0])
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser)
+          if (userData.name) {
+            setUserName(userData.name.split(" ")[0])
+          }
+          userId = userData.id || null
+        } catch (e) {
+          console.error("Error parsing user data", e)
         }
-      } catch (e) {
-        console.error("Error parsing user data", e)
+      }
+
+      // Si tenemos un userId, intentar obtener los resultados de la base de datos
+      if (userId) {
+        try {
+          const { success, results } = await getDiscResults(userId)
+
+          if (success && results) {
+            // Convertir los resultados al formato esperado
+            const discResults = {
+              D: results.d,
+              I: results.i,
+              S: results.s,
+              C: results.c,
+            }
+
+            setResults(discResults)
+
+            // Determinar el tipo dominante y menos dominante
+            const types = Object.entries(discResults)
+            types.sort((a, b) => b[1] - a[1])
+
+            setDominantType(types[0][0])
+            setLeastDominantType(types[types.length - 1][0])
+
+            // Generar descripción y patrón de relación
+            setAnalysisDescription(obtenerDescripcionPorPerfil(types[0][0], types[types.length - 1][0]))
+            setRelationshipPattern(obtenerRelacionPorPerfil(types[0][0], types[types.length - 1][0]))
+
+            // Marcar como guardado ya que se cargó de la base de datos
+            setResultsSaved(true)
+            return
+          }
+        } catch (error) {
+          console.error("Error al cargar resultados:", error)
+        }
+      }
+
+      // Si no se pudieron cargar los resultados de la base de datos, intentar cargarlos del localStorage
+      const storedResults = localStorage.getItem("discResults")
+
+      if (storedResults) {
+        const parsedResults = JSON.parse(storedResults) as DiscResults
+        setResults(parsedResults)
+
+        // Determinar el tipo dominante y menos dominante
+        const types = Object.entries(parsedResults)
+        types.sort((a, b) => b[1] - a[1])
+
+        setDominantType(types[0][0])
+        setLeastDominantType(types[types.length - 1][0])
+
+        // Generar descripción y patrón de relación
+        setAnalysisDescription(obtenerDescripcionPorPerfil(types[0][0], types[types.length - 1][0]))
+        setRelationshipPattern(obtenerRelacionPorPerfil(types[0][0], types[types.length - 1][0]))
+
+        // Guardar resultados en Supabase si hay un usuario autenticado
+        if (userId) {
+          const saveResultsToSupabase = async () => {
+            setSavingResults(true)
+            const { success } = await saveDiscResults(userId, parsedResults)
+            setSavingResults(false)
+            setResultsSaved(success)
+
+            if (success) {
+              toast({
+                title: "Resultados guardados",
+                description: "Tus resultados del test DISC han sido guardados correctamente.",
+              })
+            } else {
+              toast({
+                title: "Error al guardar resultados",
+                description: "No se pudieron guardar tus resultados. Por favor, inténtalo de nuevo más tarde.",
+                variant: "destructive",
+              })
+            }
+          }
+
+          saveResultsToSupabase()
+        }
       }
     }
 
-    if (storedResults) {
-      const parsedResults = JSON.parse(storedResults) as DiscResults
-      setResults(parsedResults)
-
-      // Determinar el tipo dominante y menos dominante
-      const types = Object.entries(parsedResults)
-      types.sort((a, b) => b[1] - a[1])
-
-      setDominantType(types[0][0])
-      setLeastDominantType(types[types.length - 1][0])
-
-      // Generar descripción y patrón de relación
-      setAnalysisDescription(obtenerDescripcionPorPerfil(types[0][0], types[types.length - 1][0]))
-      setRelationshipPattern(obtenerRelacionPorPerfil(types[0][0], types[types.length - 1][0]))
-    }
-  }, [])
+    loadResults()
+  }, [toast])
 
   // Función para descargar como PDF
   const handleDownloadPDF = async () => {
@@ -648,6 +721,20 @@ export default function ResultsPage() {
 
   return (
     <div className="container py-12 md:py-20 max-w-5xl" ref={resultRef}>
+      {isSavingResults && (
+        <div className="mb-4 flex items-center justify-center gap-2 text-primary">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>Guardando resultados...</span>
+        </div>
+      )}
+
+      {resultsSaved && (
+        <div className="mb-4 flex items-center justify-center gap-2 text-green-500">
+          <CheckCircle className="h-4 w-4" />
+          <span>Resultados guardados correctamente</span>
+        </div>
+      )}
+
       <Card className="print:shadow-none">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl">Resultados de tu Test DISC</CardTitle>

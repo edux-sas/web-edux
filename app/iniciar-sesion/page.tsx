@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Link from "next/link"
-import { Eye, EyeOff, AlertCircle } from "lucide-react"
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react"
+import { signInUser } from "@/lib/supabase"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -25,30 +26,44 @@ export default function LoginPage() {
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get("email") as string
+    const password = formData.get("password") as string
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Intentar iniciar sesión con Supabase
+      const { success, error, user } = await signInUser(email, password)
 
-    // Check if user exists in localStorage (for demo purposes)
-    const storedUser = localStorage.getItem("eduXUser")
-    if (storedUser) {
-      const userData = JSON.parse(storedUser)
-      if (userData.email === email) {
-        userData.isLoggedIn = true
-        localStorage.setItem("eduXUser", JSON.stringify(userData))
-        router.push("/dashboard")
-        return
+      if (!success) {
+        throw error || new Error("Error al iniciar sesión")
       }
-    }
 
-    // Create a demo user if no user found
-    const demoUser = {
-      name: "Usuario Demo",
-      email: email,
-      isLoggedIn: true,
+      // Guardar información del usuario en localStorage
+      localStorage.setItem(
+        "eduXUser",
+        JSON.stringify({
+          id: user?.id,
+          name: user?.user_metadata?.name || "Usuario",
+          email: user?.email,
+          isLoggedIn: true,
+          plan: user?.user_metadata?.plan || "free",
+        }),
+      )
+
+      // Redirigir al dashboard
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error)
+
+      // Verificar si es un error de credenciales inválidas
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+
+      if (errorMessage.includes("Invalid login credentials")) {
+        setError("Credenciales inválidas. Por favor, verifica tu correo y contraseña.")
+      } else {
+        setError("Error al iniciar sesión. Por favor, intenta nuevamente.")
+      }
+
+      setIsLoading(false)
     }
-    localStorage.setItem("eduXUser", JSON.stringify(demoUser))
-    router.push("/dashboard")
   }
 
   return (
@@ -92,7 +107,14 @@ export default function LoginPage() {
               </Button>
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Iniciando sesión...
+                </>
+              ) : (
+                "Iniciar sesión"
+              )}
             </Button>
           </form>
         </CardContent>

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Loader2 } from "lucide-react"
+import { AlertCircle, Loader2, Check, X } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
@@ -34,7 +34,16 @@ export default function CheckoutPage() {
     email: "",
     name: "",
     password: "",
+    confirmPassword: "",
     terms: false,
+  })
+  const [passwordValidation, setPasswordValidation] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecial: false,
+    matches: false,
   })
   const [cardData, setCardData] = useState({
     cardNumber: "",
@@ -84,16 +93,34 @@ export default function CheckoutPage() {
     }
   }, [])
 
+  // Validar contraseña cuando cambia
+  useEffect(() => {
+    const { password, confirmPassword } = formData
+
+    setPasswordValidation({
+      minLength: password.length >= 8,
+      hasUppercase: /[A-Z]/.test(password),
+      hasLowercase: /[a-z]/.test(password),
+      hasNumber: /[0-9]/.test(password),
+      hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
+      matches: password === confirmPassword && password !== "",
+    })
+  }, [formData.password, formData.confirmPassword, formData])
+
   const planId = params.plan as string
 
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$169.000 COP",
+      price: "$169.000",
+      priceCurrency: "COP",
+      priceValue: 169000,
     },
     enterprise: {
       name: "Empresarial",
       price: "Contactar",
+      priceCurrency: "COP",
+      priceValue: 0,
     },
   }
 
@@ -138,6 +165,9 @@ export default function CheckoutPage() {
     setPseData(data)
   }
 
+  // Verificar si la contraseña cumple con todos los requisitos
+  const isPasswordValid = Object.values(passwordValidation).every(Boolean)
+
   // Modificar la función handleSubmit para manejar usuarios autenticados
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -148,6 +178,17 @@ export default function CheckoutPage() {
       toast({
         title: "Error de conexión",
         description: "No se puede conectar con el servidor. Por favor, intenta más tarde.",
+        variant: "destructive",
+      })
+      setLoading(false)
+      return
+    }
+
+    // Verificar que la contraseña cumpla con los requisitos
+    if (!isAuthenticated && !isPasswordValid) {
+      toast({
+        title: "Contraseña inválida",
+        description: "Por favor, asegúrate de que la contraseña cumpla con todos los requisitos.",
         variant: "destructive",
       })
       setLoading(false)
@@ -172,7 +213,7 @@ export default function CheckoutPage() {
       }
 
       // Monto del pago
-      const amount = Number.parseFloat(plan.price.replace("$", ""))
+      const amount = plan.priceValue
 
       if (paymentMethod === "card") {
         paymentResponse = await processCardPayment({
@@ -379,11 +420,20 @@ export default function CheckoutPage() {
     : formData.email &&
       formData.name &&
       formData.password &&
+      isPasswordValid &&
       formData.terms &&
       supabaseStatus?.connected === true &&
       (paymentMethod === "card"
         ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
         : pseData.bankCode && pseData.docNumber)
+
+  // Componente para mostrar el estado de validación de la contraseña
+  const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
+    <div className="flex items-center gap-2">
+      {met ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+      <span className={met ? "text-green-500" : "text-muted-foreground"}>{text}</span>
+    </div>
+  )
 
   return (
     <div className="container py-12 max-w-5xl">
@@ -455,21 +505,61 @@ export default function CheckoutPage() {
                         </div>
 
                         {!isAuthenticated && (
-                          <div className="space-y-2">
-                            <Label htmlFor="password">Contraseña</Label>
-                            <Input
-                              id="password"
-                              name="password"
-                              type="password"
-                              placeholder="********"
-                              value={formData.password}
-                              onChange={handleInputChange}
-                              required
-                              minLength={8}
-                              disabled={!supabaseStatus?.connected}
-                            />
-                            <p className="text-xs text-muted-foreground">Debe tener al menos 8 caracteres</p>
-                          </div>
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="password">Contraseña</Label>
+                              <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                placeholder="********"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                required
+                                minLength={8}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                              <Input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                placeholder="********"
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange}
+                                required
+                                minLength={8}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+
+                            <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm">
+                              <p className="font-medium">La contraseña debe contener:</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <PasswordRequirement met={passwordValidation.minLength} text="Mínimo 8 caracteres" />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasUppercase}
+                                  text="Letras mayúsculas (A-Z)"
+                                />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasLowercase}
+                                  text="Letras minúsculas (a-z)"
+                                />
+                                <PasswordRequirement met={passwordValidation.hasNumber} text="Números (0-9)" />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasSpecial}
+                                  text="Caracteres especiales (!@#$%^&*)"
+                                />
+                                <PasswordRequirement
+                                  met={passwordValidation.matches}
+                                  text="Las contraseñas coinciden"
+                                />
+                              </div>
+                            </div>
+                          </>
                         )}
                       </div>
 
@@ -494,7 +584,7 @@ export default function CheckoutPage() {
                         />
                         <Label htmlFor="terms" className="text-sm">
                           Acepto los{" "}
-                          <a href="/terminos" className="text-primary hover:underline">
+                          <a href="/legal?section=terminos" className="text-primary hover:underline">
                             términos y condiciones
                           </a>
                         </Label>
@@ -514,12 +604,16 @@ export default function CheckoutPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>Test DISC {plan.name}</span>
-                      <span>{plan.price}</span>
+                      <span>
+                        {plan.price} {plan.priceCurrency}
+                      </span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-bold">
                       <span>Total</span>
-                      <span>{plan.price}</span>
+                      <span>
+                        {plan.price} {plan.priceCurrency}
+                      </span>
                     </div>
                   </div>
                 </CardContent>

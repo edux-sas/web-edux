@@ -8,16 +8,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { User, BarChart3, Info, GraduationCap, Zap, Heart, Shield, Brain, Clock } from "lucide-react"
-import { getCurrentUser, getDiscResults } from "@/lib/supabase"
+import {
+  User,
+  BarChart3,
+  Info,
+  GraduationCap,
+  Zap,
+  Heart,
+  Shield,
+  Brain,
+  Clock,
+  Copy,
+  CheckCircle,
+  Loader2,
+} from "lucide-react"
+import { getCurrentUser, getDiscResults, getUserData } from "@/lib/supabase"
 import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
+import { useToast } from "@/components/ui/use-toast"
 
 type UserData = {
   id?: string
   name: string
   email: string
   isLoggedIn: boolean
-  moodle_username?: string // Añadido para almacenar el nombre de usuario de Moodle
+  moodle_username?: string
+  has_completed_disc?: boolean
+  purchase_date?: string
 }
 
 type DiscResultData = {
@@ -30,12 +46,14 @@ type DiscResultData = {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [user, setUser] = useState<UserData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [discResults, setDiscResults] = useState<DiscResultData | null>(null)
   const [canTakeTest, setCanTakeTest] = useState(true)
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<NodeJS.Timeout | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     // Función para cargar los datos del usuario y resultados DISC
@@ -45,34 +63,13 @@ export default function DashboardPage() {
       // Verificar si hay un usuario en localStorage
       const storedUser = localStorage.getItem("eduXUser")
       let userData: UserData | null = null
+      let userId: string | null = null
 
       if (storedUser) {
         try {
           userData = JSON.parse(storedUser)
+          userId = userData.id || null
           setUser(userData)
-
-          // Si el usuario tiene ID, intentar obtener sus resultados DISC
-          if (userData.id) {
-            const { success, results } = await getDiscResults(userData.id)
-
-            if (success && results) {
-              setDiscResults({
-                d: results.d,
-                i: results.i,
-                s: results.s,
-                c: results.c,
-                created_at: results.created_at || new Date().toISOString(),
-              })
-
-              // Verificar si puede realizar el test nuevamente
-              const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
-              setCanTakeTest(canTake)
-
-              if (!canTake && remaining) {
-                setTimeRemaining(formatTimeRemaining(remaining))
-              }
-            }
-          }
         } catch (e) {
           console.error("Error parsing user data", e)
         }
@@ -83,7 +80,8 @@ export default function DashboardPage() {
         const { success, user: supabaseUser } = await getCurrentUser()
 
         if (success && supabaseUser) {
-          const newUserData = {
+          userId = supabaseUser.id
+          userData = {
             id: supabaseUser.id,
             name: supabaseUser.user_metadata?.name || "Usuario",
             email: supabaseUser.email || "",
@@ -91,35 +89,67 @@ export default function DashboardPage() {
             moodle_username: supabaseUser.user_metadata?.moodle_username || undefined,
           }
 
-          setUser(newUserData)
-          localStorage.setItem("eduXUser", JSON.stringify(newUserData))
-
-          // Intentar obtener resultados DISC
-          const { success: discSuccess, results, error: discError } = await getDiscResults(supabaseUser.id)
-
-          if (discSuccess && results) {
-            setDiscResults({
-              d: results.d,
-              i: results.i,
-              s: results.s,
-              c: results.c,
-              created_at: results.created_at || new Date().toISOString(),
-            })
-
-            // Verificar si puede realizar el test nuevamente
-            const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
-            setCanTakeTest(canTake)
-
-            if (!canTake && remaining) {
-              setTimeRemaining(formatTimeRemaining(remaining))
-            }
-          } else if (discError && !discError.toString().includes("No se encontraron resultados")) {
-            // Solo mostrar errores que no sean "No se encontraron resultados"
-            console.error("Error al obtener resultados DISC:", discError)
-          }
+          setUser(userData)
+          localStorage.setItem("eduXUser", JSON.stringify(userData))
         } else {
           // No hay usuario autenticado, redirigir a login
           router.push("/iniciar-sesion")
+          return
+        }
+      }
+
+      // Si tenemos un userId, obtener datos adicionales del usuario desde la tabla users
+      if (userId) {
+        const { success: userDataSuccess, userData: dbUserData } = await getUserData(userId)
+
+        if (userDataSuccess && dbUserData) {
+          // Actualizar el estado del usuario con los datos de la base de datos
+          const updatedUserData = {
+            ...userData,
+            moodle_username: dbUserData.moodle_username || userData.moodle_username,
+            has_completed_disc: dbUserData.has_completed_disc || false,
+            purchase_date: dbUserData.purchase_date || userData.purchase_date,
+          }
+
+          setUser(updatedUserData)
+
+          // Actualizar localStorage con los datos actualizados
+          localStorage.setItem("eduXUser", JSON.stringify(updatedUserData))
+
+          // Si el usuario no ha completado el test DISC, redirigir a la página del test
+          if (!dbUserData.has_completed_disc) {
+            toast({
+              title: "Test DISC pendiente",
+              description: "Debes completar el test DISC antes de acceder al dashboard",
+            })
+            router.push("/test-disc/start")
+            return
+          }
+        }
+
+        // Intentar obtener resultados DISC
+        const { success: discSuccess, results } = await getDiscResults(userId)
+
+        if (discSuccess && results) {
+          setDiscResults({
+            d: results.d,
+            i: results.i,
+            s: results.s,
+            c: results.c,
+            created_at: results.created_at || new Date().toISOString(),
+          })
+
+          // Verificar si puede realizar el test nuevamente
+          const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
+          setCanTakeTest(canTake)
+
+          if (!canTake && remaining) {
+            setTimeRemaining(formatTimeRemaining(remaining))
+          }
+        } else {
+          // Si no hay resultados DISC pero el usuario debería haberlos completado, redirigir al test
+          router.push("/test-disc/start")
+          return
         }
       }
 
@@ -149,7 +179,24 @@ export default function DashboardPage() {
         clearInterval(countdown)
       }
     }
-  }, [router])
+  }, [router, toast])
+
+  // Función para copiar el nombre de usuario de Moodle al portapapeles
+  const copyMoodleUsername = () => {
+    if (user?.moodle_username) {
+      navigator.clipboard.writeText(user.moodle_username)
+      setCopied(true)
+      toast({
+        title: "Nombre de usuario copiado",
+        description: "El nombre de usuario de Moodle ha sido copiado al portapapeles",
+      })
+
+      // Restablecer el estado después de 2 segundos
+      setTimeout(() => {
+        setCopied(false)
+      }, 2000)
+    }
+  }
 
   // Determinar el perfil dominante
   const getDominantProfile = () => {
@@ -185,7 +232,12 @@ export default function DashboardPage() {
   }
 
   if (isLoading) {
-    return <div className="container py-12">Cargando...</div>
+    return (
+      <div className="container py-12 flex flex-col items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p>Cargando información del usuario...</p>
+      </div>
+    )
   }
 
   if (!user) {
@@ -326,17 +378,14 @@ export default function DashboardPage() {
                       <Info className="h-4 w-4" />
                       <AlertTitle>Información</AlertTitle>
                       <AlertDescription>
-                        Necesitas adquirir un plan para realizar el test DISC completo y recibir un informe detallado.
+                        Necesitas completar el test DISC para acceder a todas las funcionalidades del dashboard.
                       </AlertDescription>
                     </Alert>
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row gap-3">
                   <Button asChild>
-                    <Link href="/test-disc">Ver planes</Link>
-                  </Button>
-                  <Button variant="outline" asChild>
-                    <Link href="/test-disc/demo">Probar demo gratuito</Link>
+                    <Link href="/test-disc/start">Realizar Test DISC</Link>
                   </Button>
                 </CardFooter>
               </Card>
@@ -379,15 +428,32 @@ export default function DashboardPage() {
                     acceder con tus credenciales.
                   </p>
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm">
-                      <span className="font-medium">Usuario:</span>{" "}
-                      {user?.moodle_username || user?.email?.split("@")[0] + "..."}
-                      {!user?.moodle_username && (
-                        <span className="text-xs text-amber-500 ml-2">
-                          (El nombre de usuario exacto se muestra al iniciar sesión en Moodle)
-                        </span>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm">
+                        <span className="font-medium">Usuario:</span>{" "}
+                        {user?.moodle_username ? (
+                          <span className="bg-primary/10 px-2 py-1 rounded font-mono">{user.moodle_username}</span>
+                        ) : (
+                          <span className="text-muted-foreground">{user?.email?.split("@")[0] + "..."}</span>
+                        )}
+                      </p>
+                      {user?.moodle_username && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={copyMoodleUsername}
+                          title="Copiar nombre de usuario"
+                        >
+                          {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                       )}
-                    </p>
+                    </div>
+                    {!user?.moodle_username && (
+                      <p className="text-xs text-amber-500">
+                        (El nombre de usuario exacto se muestra al iniciar sesión en Moodle)
+                      </p>
+                    )}
                     <p className="text-sm">
                       <span className="font-medium">Contraseña:</span> La misma que utilizas para acceder a eduX
                     </p>
@@ -424,8 +490,33 @@ export default function DashboardPage() {
                   <p>{user.email}</p>
                 </div>
                 <div className="space-y-1">
+                  <p className="text-sm font-medium">Nombre de usuario Moodle</p>
+                  {user.moodle_username ? (
+                    <div className="flex items-center gap-2">
+                      <p className="bg-primary/10 px-2 py-1 rounded font-mono">{user.moodle_username}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={copyMoodleUsername}
+                        title="Copiar nombre de usuario"
+                      >
+                        {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No disponible</p>
+                  )}
+                </div>
+                <div className="space-y-1">
                   <p className="text-sm font-medium">Miembro desde</p>
-                  <p>Mayo 2023</p>
+                  <p>
+                    {new Date(user.purchase_date || Date.now()).toLocaleDateString("es-ES", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Plan actual</p>
@@ -437,8 +528,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex justify-between border-t pt-6">
-                <Button variant="outline">Editar perfil</Button>
+              <CardFooter className="flex justify-end border-t pt-6">
                 <Button
                   variant="destructive"
                   onClick={async () => {

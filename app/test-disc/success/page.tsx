@@ -3,12 +3,14 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
-import { CheckCircle, AlertCircle, GraduationCap } from "lucide-react"
+import { CheckCircle, AlertCircle, GraduationCap, Copy } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/components/ui/use-toast"
 
 export default function SuccessPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [moodleStatus, setMoodleStatus] = useState<{
     success: boolean
     message: string
@@ -20,6 +22,7 @@ export default function SuccessPage() {
       error?: string
     }>
   } | null>(null)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     // Intentar obtener el estado de la sincronización con Moodle desde localStorage
@@ -48,6 +51,23 @@ export default function SuccessPage() {
       }
     }
   }, [])
+
+  // Función para copiar el nombre de usuario de Moodle al portapapeles
+  const copyMoodleUsername = () => {
+    if (moodleStatus?.username) {
+      navigator.clipboard.writeText(moodleStatus.username)
+      setCopied(true)
+      toast({
+        title: "Nombre de usuario copiado",
+        description: "El nombre de usuario de Moodle ha sido copiado al portapapeles",
+      })
+
+      // Restablecer el estado después de 2 segundos
+      setTimeout(() => {
+        setCopied(false)
+      }, 2000)
+    }
+  }
 
   return (
     <div className="container py-12 max-w-md">
@@ -83,13 +103,13 @@ export default function SuccessPage() {
           {/* Mostrar estado de Moodle si está disponible */}
           {moodleStatus && (
             <div
-              className={`p-3 rounded-md text-sm mb-4 ${moodleStatus.success ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}
+              className={`p-3 rounded-md text-sm mb-4 ${moodleStatus.success ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"}`}
             >
               <div className="flex items-start gap-2">
                 {moodleStatus.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                  <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
                 )}
                 <div>
                   <p>
@@ -98,10 +118,26 @@ export default function SuccessPage() {
                       : "Tu cuenta ha sido creada, pero hubo un problema con la plataforma de cursos. Nuestro equipo lo resolverá pronto."}
                   </p>
                   {moodleStatus.username && (
-                    <p className="mt-2 font-medium">
-                      Tu nombre de usuario para la plataforma Moodle es:{" "}
-                      <span className="text-primary">{moodleStatus.username}</span>
-                    </p>
+                    <div className="mt-2">
+                      <p className="font-medium mb-1">Tu nombre de usuario para la plataforma Moodle es:</p>
+                      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded">
+                        <code className="text-primary font-mono">{moodleStatus.username}</code>
+                        <button
+                          onClick={copyMoodleUsername}
+                          className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+                          title="Copiar nombre de usuario"
+                        >
+                          {copied ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4 text-gray-500" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs mt-1">
+                        Guarda este nombre de usuario. Lo necesitarás para acceder a tus cursos.
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
@@ -110,18 +146,18 @@ export default function SuccessPage() {
 
           {/* Mostrar información sobre cursos inscritos */}
           {moodleStatus?.enrollments && moodleStatus.enrollments.length > 0 && (
-            <div className="bg-blue-50 p-3 rounded-md text-sm mb-4 text-blue-700">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md text-sm mb-4 text-blue-700 dark:text-blue-300">
               <div className="flex items-start gap-2">
-                <GraduationCap className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                <GraduationCap className="h-5 w-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium">¡Has sido inscrito automáticamente en los siguientes cursos!</p>
                   <ul className="mt-2 space-y-1 text-sm">
                     {moodleStatus.enrollments.map((enrollment, index) => (
                       <li key={index} className="flex items-center gap-1">
                         {enrollment.success ? (
-                          <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                          <CheckCircle className="h-3 w-3 text-green-500 dark:text-green-400 shrink-0" />
                         ) : (
-                          <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" />
+                          <AlertCircle className="h-3 w-3 text-amber-500 dark:text-amber-400 shrink-0" />
                         )}
                         <span>{enrollment.courseName}</span>
                       </li>
@@ -138,6 +174,9 @@ export default function SuccessPage() {
         <CardFooter className="flex flex-col space-y-2">
           <Button asChild className="w-full">
             <Link href="/test-disc/start">Comenzar Test DISC</Link>
+          </Button>
+          <Button asChild variant="outline" className="w-full">
+            <Link href="/dashboard">Ir al Dashboard</Link>
           </Button>
         </CardFooter>
       </Card>

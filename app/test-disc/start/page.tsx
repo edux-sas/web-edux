@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Progress } from "@/components/ui/progress"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Clock, AlertCircle } from "lucide-react"
-import { getCurrentUser, getDiscResults } from "@/lib/supabase"
+import { Clock, AlertCircle, Loader2 } from "lucide-react"
+import { getCurrentUser, getDiscResults, getUserData } from "@/lib/supabase"
 import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
 import Link from "next/link"
 
@@ -71,6 +71,7 @@ export default function TestDiscStart() {
   const [canTakeTest, setCanTakeTest] = useState(true)
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null)
   const [isCheckingEligibility, setIsCheckingEligibility] = useState(true)
+  const [hasCompletedDisc, setHasCompletedDisc] = useState(false)
 
   // Verificar si el usuario puede realizar el test
   useEffect(() => {
@@ -106,17 +107,48 @@ export default function TestDiscStart() {
         }
       }
 
-      // Verificar si el usuario ya ha realizado un test
+      // Verificar si el usuario ya ha completado el test DISC
       if (currentUserId) {
-        const { success, results } = await getDiscResults(currentUserId)
+        // Obtener datos del usuario desde la tabla users
+        const { success: userDataSuccess, userData: dbUserData } = await getUserData(currentUserId)
 
-        if (success && results && results.created_at) {
-          // Verificar si puede realizar el test nuevamente
-          const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
-          setCanTakeTest(canTake)
+        if (userDataSuccess && dbUserData && dbUserData.has_completed_disc) {
+          setHasCompletedDisc(true)
 
-          if (!canTake && remaining) {
-            setTimeRemaining(formatTimeRemaining(remaining))
+          // Si el usuario ya ha completado el test, verificar si puede realizarlo nuevamente
+          const { success, results } = await getDiscResults(currentUserId)
+
+          if (success && results && results.created_at) {
+            // Verificar si puede realizar el test nuevamente usando la fecha real de la base de datos
+            const { canTakeTest: canTake, timeRemaining: remaining } = getTimeUntilNextTest(results.created_at)
+            setCanTakeTest(canTake)
+
+            if (!canTake && remaining) {
+              setTimeRemaining(formatTimeRemaining(remaining))
+
+              // Configurar un intervalo para actualizar el contador en tiempo real
+              const timerInterval = setInterval(() => {
+                const { canTakeTest: canTakeNow, timeRemaining: remainingNow } = getTimeUntilNextTest(
+                  results.created_at,
+                )
+                if (canTakeNow) {
+                  setCanTakeTest(true)
+                  setTimeRemaining(null)
+                  clearInterval(timerInterval)
+                } else if (remainingNow) {
+                  setTimeRemaining(formatTimeRemaining(remainingNow))
+                }
+              }, 60000) // Actualizar cada minuto
+
+              // Limpiar el intervalo cuando el componente se desmonte
+              return () => clearInterval(timerInterval)
+            }
+
+            // Si ya ha completado el test y no puede realizarlo nuevamente, redirigir al dashboard
+            if (!canTake) {
+              router.push("/dashboard")
+              return
+            }
           }
         }
       }
@@ -201,6 +233,25 @@ export default function TestDiscStart() {
       // Guardar el ID del usuario si está disponible
       if (userId) {
         localStorage.setItem("discUserId", userId)
+
+        // Guardar resultados en la base de datos
+        const response = await fetch("/api/disc/save-results", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId, results }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+        }
+
+        // Actualizar el estado de has_completed_disc en localStorage
+        const userData = JSON.parse(localStorage.getItem("eduXUser") || "{}")
+        userData.has_completed_disc = true
+        localStorage.setItem("eduXUser", JSON.stringify(userData))
       }
 
       // Redirigir a la página de resultados
@@ -224,13 +275,13 @@ export default function TestDiscStart() {
           Por favor espera mientras verificamos si puedes realizar el test...
         </p>
         <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       </div>
     )
   }
 
-  if (!canTakeTest) {
+  if (hasCompletedDisc && !canTakeTest) {
     return (
       <div className="container py-12 max-w-md">
         <Card>
@@ -335,7 +386,16 @@ export default function TestDiscStart() {
             Anterior
           </Button>
           <Button onClick={handleNextClick} disabled={loading}>
-            {loading ? "Procesando..." : indiceGrupoActual === palabras.length - 1 ? "Finalizar" : "Siguiente"}
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Procesando...</span>
+              </div>
+            ) : indiceGrupoActual === palabras.length - 1 ? (
+              "Finalizar"
+            ) : (
+              "Siguiente"
+            )}
           </Button>
         </CardFooter>
       </Card>

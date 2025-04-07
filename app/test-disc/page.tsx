@@ -45,7 +45,7 @@ export default function TestDiscPage() {
     {
       id: "professional",
       name: "Profesional",
-      price: "$59.99",
+      price: "$169.000 COP",
       description: "Perfecto para desarrollo profesional",
       features: [
         "Informe detallado de perfil DISC",

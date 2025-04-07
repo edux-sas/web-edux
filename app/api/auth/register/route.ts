@@ -33,7 +33,6 @@ try {
   console.error("Error al crear el cliente Supabase:", error)
 }
 
-// Modificar la función POST para guardar el nombre de usuario de Moodle en la respuesta
 export async function POST(request: NextRequest) {
   try {
     // Verificar si el cliente de Supabase existe
@@ -50,7 +49,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener datos del cuerpo de la solicitud
-    const requestData = await request.json()   
+    const requestData = await request.json()
+    console.log("Datos recibidos:", JSON.stringify(requestData))
 
     const { email, password, userData } = requestData
 
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Insertar datos del usuario en la tabla users
+    // Nota: No incluimos moodle_username aquí porque aún no lo tenemos
     const { error: insertError } = await supabaseAdmin
       .schema("api")
       .from("users")
@@ -86,6 +87,7 @@ export async function POST(request: NextRequest) {
         {
           id: authData.user.id,
           ...userData,
+          has_completed_disc: false, // Inicialmente, el usuario no ha completado el test DISC
         },
       ])
 
@@ -159,16 +161,29 @@ export async function POST(request: NextRequest) {
 
           // Actualizar el usuario en Supabase con el nombre de usuario de Moodle
           if (moodleUsername) {
-            await supabaseAdmin
+            // Actualizar en la tabla users
+            const { error: updateError } = await supabaseAdmin
               .schema("api")
               .from("users")
               .update({ moodle_username: moodleUsername })
               .eq("id", authData.user.id)
 
+            if (updateError) {
+              console.error("Error al actualizar moodle_username en la tabla users:", updateError)
+            } else {
+              console.log(`✅ Moodle username '${moodleUsername}' guardado en la tabla users`)
+            }
+
             // También actualizar los metadatos del usuario
-            await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
+            const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
               user_metadata: { ...userData, moodle_username: moodleUsername },
             })
+
+            if (metadataError) {
+              console.error("Error al actualizar metadatos del usuario:", metadataError)
+            } else {
+              console.log(`✅ Moodle username '${moodleUsername}' guardado en los metadatos del usuario`)
+            }
           }
         }
       } catch (moodleError) {

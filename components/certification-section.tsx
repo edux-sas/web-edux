@@ -52,8 +52,8 @@ export default function CertificationSection() {
               <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ChatGPT%20Image%2031%20mar%202025%2C%2014_59_06-ht81Xutz3EHtNwQhwxyoEZFBY0PEYI.png"
                 alt="Certificado eduX"
-                width={380}
-                height={380}
+                width={480}
+                height={480}
                 className="object-contain"
               />
 
@@ -76,7 +76,7 @@ export default function CertificationSection() {
             <Image
               src="/images/logos/utede.png"
               alt="UTEDÉ - Unidad Técnica para el Desarrollo Profesional"
-              width={300}
+              width={200}
               height={120}
               className="object-contain"
             />

@@ -107,6 +107,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 })
     }
 
+    // Actualizar el campo has_completed_disc en la tabla users
+    const { error: updateError } = await supabaseAdmin
+      .schema("api")
+      .from("users")
+      .update({ has_completed_disc: true })
+      .eq("id", userId)
+
+    if (updateError) {
+      console.error("Error al actualizar has_completed_disc:", updateError)
+      // No fallamos la operación completa, solo registramos el error
+    } else {
+      console.log(`✅ Campo has_completed_disc actualizado para el usuario ${userId}`)
+    }
+
     return NextResponse.json({
       success: true,
       data,

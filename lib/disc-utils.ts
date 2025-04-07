@@ -5,6 +5,7 @@ export function getTimeUntilNextTest(lastTestDate: string | null): {
     days: number
     hours: number
     minutes: number
+    seconds: number
   } | null
 } {
   // Si no hay fecha del último test, puede realizarlo inmediatamente
@@ -30,11 +31,12 @@ export function getTimeUntilNextTest(lastTestDate: string | null): {
     }
   }
 
-  // Calcular tiempo restante
+  // Calcular tiempo restante con precisión de segundos
   const diffMs = nextAvailableDate.getTime() - now.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
   const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+  const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000)
 
   return {
     canTakeTest: false,
@@ -42,12 +44,18 @@ export function getTimeUntilNextTest(lastTestDate: string | null): {
       days: diffDays,
       hours: diffHours,
       minutes: diffMinutes,
+      seconds: diffSeconds,
     },
   }
 }
 
 // Función para formatear el tiempo restante
-export function formatTimeRemaining(timeRemaining: { days: number; hours: number; minutes: number }): string {
+export function formatTimeRemaining(timeRemaining: {
+  days: number
+  hours: number
+  minutes: number
+  seconds?: number
+}): string {
   if (timeRemaining.days > 0) {
     return `${timeRemaining.days} día${timeRemaining.days !== 1 ? "s" : ""} y ${timeRemaining.hours} hora${timeRemaining.hours !== 1 ? "s" : ""}`
   } else if (timeRemaining.hours > 0) {

@@ -102,12 +102,7 @@ export default function LoginPage() {
                   <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
                 </Button>
               </div>
-            </div>
-            <div className="flex items-center justify-end">
-              <Button variant="link" className="p-0 h-auto font-normal text-sm" asChild>
-                <Link href="/recuperar-contrasena">¿Olvidaste tu contraseña?</Link>
-              </Button>
-            </div>
+            </div>            
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -120,12 +115,7 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <div className="text-sm text-muted-foreground text-center">o continúa con</div>
-          <div className="grid grid-cols-2 gap-4 w-full">
-            <Button variant="outline">Google</Button>
-            <Button variant="outline">Facebook</Button>
-          </div>
+        <CardFooter className="flex flex-col space-y-4">          
           <div className="text-sm text-center mt-4">
             ¿No tienes una cuenta?{" "}
             <Link href="/registro" className="text-primary hover:underline">

@@ -280,3 +280,24 @@ export async function checkSupabaseConnection() {
   }
 }
 
+// Añadir una función para obtener los datos del usuario desde la tabla users
+export async function getUserData(userId: string) {
+  try {
+    if (!supabase) {
+      return {
+        success: false,
+        error: new Error("No se ha configurado la conexión con Supabase. Por favor, contacta al administrador."),
+      }
+    }
+
+    const { data, error } = await supabase.schema("api").from("users").select("*").eq("id", userId).single()
+
+    if (error) throw error
+
+    return { success: true, userData: data }
+  } catch (error) {
+    console.error("Error al obtener datos del usuario:", error)
+    return { success: false, error }
+  }
+}
+

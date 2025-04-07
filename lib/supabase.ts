@@ -122,6 +122,8 @@ export async function signInUser(email: string, password: string) {
   }
 }
 
+// Mejorar la función signOutUser para asegurar que se limpie completamente la sesión
+
 // Función para cerrar sesión
 export async function signOutUser() {
   try {
@@ -132,7 +134,15 @@ export async function signOutUser() {
       }
     }
 
+    // Cerrar sesión en Supabase
     const { error } = await supabase.auth.signOut()
+
+    // Limpiar datos de localStorage
+    localStorage.removeItem("eduXUser")
+    localStorage.removeItem("discResults")
+    localStorage.removeItem("discUserId")
+    localStorage.removeItem("moodleRegistrationStatus")
+
     if (error) throw error
     return { success: true }
   } catch (error) {
@@ -199,6 +209,16 @@ export async function getDiscResults(userId: string) {
 
     if (!response.ok) {
       const errorText = await response.text()
+
+      // Si el error es "No se encontraron resultados", no es un error real
+      if (response.status === 404 && errorText.includes("No se encontraron resultados")) {
+        return {
+          success: false,
+          error: "No se encontraron resultados para este usuario",
+          notFound: true, // Indicador específico para este caso
+        }
+      }
+
       console.error("Error en la respuesta del servidor:", errorText)
       throw new Error(`Error al obtener resultados: ${response.status} ${response.statusText}`)
     }

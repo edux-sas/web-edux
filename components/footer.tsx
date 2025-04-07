@@ -1,8 +1,19 @@
-import Link from "next/link"
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin, Globe, ChevronRight, Heart } from "lucide-react"
+import Link from "next/link";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  Linkedin,
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  ChevronRight,
+  Heart,
+} from "lucide-react";
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear()
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="w-full py-16 md:py-20 lg:py-24 bg-background border-t relative overflow-hidden">
@@ -20,9 +31,10 @@ export default function Footer() {
             </span>
           </Link>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Transformamos la educación digital con soluciones innovadoras. Nuestra plataforma combina cursos académicos
-            de alta calidad, evaluaciones DISC personalizadas y tecnología de vanguardia para potenciar el desarrollo
-            profesional y personal.
+            En eduX estamos comprometidos con la transformación digital y el
+            éxito compartido. Descubre nuestras soluciones, conecta con nuestro
+            equipo y sé parte del cambio. ¡Contáctanos y transformemos
+            juntos el futuro!
           </p>
           <div className="flex space-x-5 mt-8">
             <Link
@@ -66,7 +78,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/servicios/licencias"
+                  href="/contacto"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -75,7 +87,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/servicios/consultoria"
+                  href="/contacto"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -84,7 +96,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/servicios/desarrollo"
+                  href="/contacto"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -93,7 +105,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/servicios/capacitacion"
+                  href="/contacto"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -111,7 +123,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li>
                 <Link
-                  href="/test-disc/sobre"
+                  href="/test-disc"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -120,7 +132,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/test-disc/beneficios"
+                  href="/test-disc"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -129,7 +141,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/test-disc/precios"
+                  href="/test-disc"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -138,7 +150,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href="/test-disc/empresas"
+                  href="/test-disc"
                   className="text-muted-foreground hover:text-primary flex items-center group"
                 >
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -154,25 +166,30 @@ export default function Footer() {
               <span className="absolute bottom-0 left-0 w-full h-1 bg-primary/20"></span>
             </h3>
             <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <span className="text-muted-foreground">Calle Principal 123, Bogotá, Colombia</span>
-              </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-primary shrink-0" />
-                <Link href="tel:+573001234567" className="text-muted-foreground hover:text-primary">
-                  +57 300 123 4567
+                <Link
+                  href="tel:+573001234567"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  +57 3171165904
                 </Link>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                <Link href="mailto:info@edux.com.co" className="text-muted-foreground hover:text-primary">
-                  info@edux.com.co
+                <Link
+                  href="mailto:info@edux.com.co"
+                  className="text-muted-foreground hover:text-primary"
+                >
+                  formacionedux@gmail.com
                 </Link>
               </li>
               <li className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-primary shrink-0" />
-                <Link href="https://www.edux.com.co" className="text-muted-foreground hover:text-primary">
+                <Link
+                  href="https://www.edux.com.co"
+                  className="text-muted-foreground hover:text-primary"
+                >
                   www.edux.com.co
                 </Link>
               </li>
@@ -182,16 +199,16 @@ export default function Footer() {
 
         {/* Enlaces legales */}
         <div className="flex flex-wrap justify-center gap-6 py-6 border-t border-b mb-8">
-          <Link href="/legal/terminos" className="text-sm text-muted-foreground hover:text-primary">
+          <Link href="/legal?section=terminos" className="text-sm text-muted-foreground hover:text-primary">
             Términos y Condiciones
           </Link>
-          <Link href="/legal/privacidad" className="text-sm text-muted-foreground hover:text-primary">
+          <Link href="/legal?section=privacidad" className="text-sm text-muted-foreground hover:text-primary">
             Política de Privacidad
           </Link>
-          <Link href="/legal/cookies" className="text-sm text-muted-foreground hover:text-primary">
+          <Link href="/legal?section=cookies" className="text-sm text-muted-foreground hover:text-primary">
             Política de Cookies
           </Link>
-          <Link href="/legal/accesibilidad" className="text-sm text-muted-foreground hover:text-primary">
+          <Link href="/legal?section=accesibilidad" className="text-sm text-muted-foreground hover:text-primary">
             Accesibilidad
           </Link>
         </div>
@@ -199,12 +216,11 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center">
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho con{" "}
-            <Heart className="h-4 w-4 text-red-500 inline" /> en Colombia
+            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho
+            con <Heart className="h-4 w-4 text-red-500 inline" /> en Colombia
           </p>
         </div>
       </div>
     </footer>
-  )
+  );
 }
-

@@ -48,6 +48,8 @@ export default function CheckoutPage() {
     docType: "CC",
     docNumber: "",
   })
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -59,6 +61,27 @@ export default function CheckoutPage() {
     }
 
     checkConnection()
+
+    // Verificar si el usuario ya está autenticado
+    const storedUser = localStorage.getItem("eduXUser")
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser)
+        if (userData.isLoggedIn) {
+          setIsAuthenticated(true)
+          setUserId(userData.id)
+          // Pre-llenar los datos del formulario
+          setFormData((prev) => ({
+            ...prev,
+            email: userData.email || "",
+            name: userData.name || "",
+            terms: true,
+          }))
+        }
+      } catch (e) {
+        console.error("Error parsing user data", e)
+      }
+    }
   }, [])
 
   const planId = params.plan as string
@@ -115,7 +138,7 @@ export default function CheckoutPage() {
     setPseData(data)
   }
 
-  // Modificar la función handleSubmit para manejar mejor los errores
+  // Modificar la función handleSubmit para manejar usuarios autenticados
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -193,7 +216,42 @@ export default function CheckoutPage() {
       // Fecha actual para el registro de la compra
       const purchaseDate = new Date().toISOString()
 
-      // Datos para el registro de usuario
+      // Si el usuario ya está autenticado, actualizar su plan
+      if (isAuthenticated && userId) {
+        try {
+          const response = await fetch("/api/user/update-plan", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId,
+              plan: planId,
+              payment_status: paymentResponse.transactionResponse.state,
+              purchase_date: purchaseDate,
+              amount,
+            }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Error al actualizar el plan del usuario")
+          }
+
+          // Actualizar la información del usuario en localStorage
+          const userData = JSON.parse(localStorage.getItem("eduXUser") || "{}")
+          userData.plan = planId
+          localStorage.setItem("eduXUser", JSON.stringify(userData))
+
+          // Redirigir a página de éxito
+          router.push("/test-disc/success")
+          return
+        } catch (error) {
+          console.error("Error al actualizar el plan:", error)
+          throw error
+        }
+      }
+
+      // Si no está autenticado, continuar con el registro normal
       const registerData = {
         email: formData.email,
         password: formData.password,
@@ -290,6 +348,11 @@ export default function CheckoutPage() {
         }),
       )
 
+      // Guardar el estado de la integración con Moodle
+      if (registerResult.moodle) {
+        localStorage.setItem("moodleRegistrationStatus", JSON.stringify(registerResult.moodle))
+      }
+
       // Redirigir a página de éxito
       router.push("/test-disc/success")
     } catch (error) {
@@ -306,15 +369,21 @@ export default function CheckoutPage() {
     }
   }
 
-  const isFormValid =
-    formData.email &&
-    formData.name &&
-    formData.password &&
-    formData.terms &&
-    supabaseStatus?.connected === true &&
-    (paymentMethod === "card"
-      ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-      : pseData.bankCode && pseData.docNumber)
+  // Modificar la validación del formulario para usuarios autenticados
+  const isFormValid = isAuthenticated
+    ? formData.terms &&
+      supabaseStatus?.connected === true &&
+      (paymentMethod === "card"
+        ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
+        : pseData.bankCode && pseData.docNumber)
+    : formData.email &&
+      formData.name &&
+      formData.password &&
+      formData.terms &&
+      supabaseStatus?.connected === true &&
+      (paymentMethod === "card"
+        ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
+        : pseData.bankCode && pseData.docNumber)
 
   return (
     <div className="container py-12 max-w-5xl">
@@ -345,7 +414,11 @@ export default function CheckoutPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Información de Pago y Registro</CardTitle>
-                  <CardDescription>Ingresa tus datos para procesar el pago y crear tu cuenta</CardDescription>
+                  <CardDescription>
+                    {isAuthenticated
+                      ? "Completa la información de pago para actualizar tu plan"
+                      : "Ingresa tus datos para procesar el pago y crear tu cuenta"}
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit}>
@@ -364,7 +437,7 @@ export default function CheckoutPage() {
                             value={formData.email}
                             onChange={handleInputChange}
                             required
-                            disabled={!supabaseStatus?.connected}
+                            disabled={isAuthenticated || !supabaseStatus?.connected}
                           />
                         </div>
 
@@ -377,25 +450,27 @@ export default function CheckoutPage() {
                             value={formData.name}
                             onChange={handleInputChange}
                             required
-                            disabled={!supabaseStatus?.connected}
+                            disabled={isAuthenticated || !supabaseStatus?.connected}
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Contraseña</Label>
-                          <Input
-                            id="password"
-                            name="password"
-                            type="password"
-                            placeholder="********"
-                            value={formData.password}
-                            onChange={handleInputChange}
-                            required
-                            minLength={8}
-                            disabled={!supabaseStatus?.connected}
-                          />
-                          <p className="text-xs text-muted-foreground">Debe tener al menos 8 caracteres</p>
-                        </div>
+                        {!isAuthenticated && (
+                          <div className="space-y-2">
+                            <Label htmlFor="password">Contraseña</Label>
+                            <Input
+                              id="password"
+                              name="password"
+                              type="password"
+                              placeholder="********"
+                              value={formData.password}
+                              onChange={handleInputChange}
+                              required
+                              minLength={8}
+                              disabled={!supabaseStatus?.connected}
+                            />
+                            <p className="text-xs text-muted-foreground">Debe tener al menos 8 caracteres</p>
+                          </div>
+                        )}
                       </div>
 
                       <Separator />
@@ -470,6 +545,4 @@ export default function CheckoutPage() {
     </div>
   )
 }
-
-
 

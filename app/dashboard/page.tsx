@@ -17,6 +17,7 @@ type UserData = {
   name: string
   email: string
   isLoggedIn: boolean
+  moodle_username?: string // Añadido para almacenar el nombre de usuario de Moodle
 }
 
 type DiscResultData = {
@@ -87,13 +88,14 @@ export default function DashboardPage() {
             name: supabaseUser.user_metadata?.name || "Usuario",
             email: supabaseUser.email || "",
             isLoggedIn: true,
+            moodle_username: supabaseUser.user_metadata?.moodle_username || undefined,
           }
 
           setUser(newUserData)
           localStorage.setItem("eduXUser", JSON.stringify(newUserData))
 
           // Intentar obtener resultados DISC
-          const { success: discSuccess, results } = await getDiscResults(supabaseUser.id)
+          const { success: discSuccess, results, error: discError } = await getDiscResults(supabaseUser.id)
 
           if (discSuccess && results) {
             setDiscResults({
@@ -111,6 +113,9 @@ export default function DashboardPage() {
             if (!canTake && remaining) {
               setTimeRemaining(formatTimeRemaining(remaining))
             }
+          } else if (discError && !discError.toString().includes("No se encontraron resultados")) {
+            // Solo mostrar errores que no sean "No se encontraron resultados"
+            console.error("Error al obtener resultados DISC:", discError)
           }
         } else {
           // No hay usuario autenticado, redirigir a login
@@ -375,7 +380,13 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex flex-col gap-2">
                     <p className="text-sm">
-                      <span className="font-medium">Usuario:</span> {user?.email}
+                      <span className="font-medium">Usuario:</span>{" "}
+                      {user?.moodle_username || user?.email?.split("@")[0] + "..."}
+                      {!user?.moodle_username && (
+                        <span className="text-xs text-amber-500 ml-2">
+                          (El nombre de usuario exacto se muestra al iniciar sesión en Moodle)
+                        </span>
+                      )}
                     </p>
                     <p className="text-sm">
                       <span className="font-medium">Contraseña:</span> La misma que utilizas para acceder a eduX
@@ -385,7 +396,11 @@ export default function DashboardPage() {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full">
-                  <a href="https://moodle.edux.com.co" target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={process.env.NEXT_PUBLIC_MOODLE_URL || "https://campus.edux.com.co"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Acceder a Moodle
                   </a>
                 </Button>
@@ -426,8 +441,24 @@ export default function DashboardPage() {
                 <Button variant="outline">Editar perfil</Button>
                 <Button
                   variant="destructive"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Remove user from localStorage
                     localStorage.removeItem("eduXUser")
+
+                    // También eliminar cualquier otro dato de sesión que pueda existir
+                    localStorage.removeItem("discResults")
+                    localStorage.removeItem("discUserId")
+                    localStorage.removeItem("moodleRegistrationStatus")
+
+                    // Sign out from Supabase
+                    try {
+                      const { signOutUser } = await import("@/lib/supabase")
+                      await signOutUser()
+                    } catch (error) {
+                      console.error("Error signing out:", error)
+                    }
+
+                    // Redirect to home page
                     router.push("/")
                   }}
                 >

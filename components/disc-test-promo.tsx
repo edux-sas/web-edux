@@ -45,8 +45,8 @@ export default function DiscTestPromo() {
                   src="/images/discover-profile.png"
                   alt="Persona descubriendo su perfil DISC en eduX"
                   className="object-cover rounded-lg shadow-xl"
-                  width={450}
-                  height={450}
+                  width={550}
+                  height={550}
                 />
               </div>
             </div>

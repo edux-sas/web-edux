@@ -39,9 +39,27 @@ export default function Header() {
     }
   }, [pathname]) // Re-check when pathname changes
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Remove user from localStorage
     localStorage.removeItem("eduXUser")
+
+    // También eliminar cualquier otro dato de sesión que pueda existir
+    localStorage.removeItem("discResults")
+    localStorage.removeItem("discUserId")
+    localStorage.removeItem("moodleRegistrationStatus")
+
+    // Sign out from Supabase
+    try {
+      const { signOutUser } = await import("@/lib/supabase")
+      await signOutUser()
+    } catch (error) {
+      console.error("Error signing out:", error)
+    }
+
+    // Reset user state
     setUser(null)
+
+    // Redirect to home page
     router.push("/")
   }
 
@@ -128,15 +146,6 @@ export default function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard?tab=profile">Mi perfil</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard?tab=courses">Mis cursos</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard?tab=disc">Test DISC</Link>
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>Cerrar sesión</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -172,16 +181,13 @@ export default function Header() {
                   {user ? (
                     // Mobile menu for logged in users
                     <>
-                      {dashboardRoutes.map((route) => (
-                        <Link
-                          key={route.href}
-                          href={route.href}
-                          className="text-sm font-medium transition-colors hover:text-primary"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {route.label}
-                        </Link>
-                      ))}
+                      <Link
+                        href="/dashboard"
+                        className="text-sm font-medium transition-colors hover:text-primary"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
                       <div className="h-px bg-border my-2" />
                       <Button
                         variant="ghost"

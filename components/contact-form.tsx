@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +20,7 @@ interface ContactFormProps {
 export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar mensaje" }: ContactFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formSubmitted, setFormSubmitted] = useState(false)
-  const [formError, setFormError] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -28,6 +28,9 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
     subject: defaultSubject || "",
     message: "",
   })
+
+  // Campo honeypot para detectar bots (invisible para usuarios reales)
+  const honeypotRef = useRef<HTMLInputElement>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -41,21 +44,42 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsSubmitting(true)
-    setFormError(false)
+    setFormError(null)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Verificar si el campo honeypot está lleno (indicaría un bot)
+      const honeypotValue = honeypotRef.current?.value
 
-      // Form submission successful
-      setFormSubmitted(true)
+      // Enviar datos al endpoint
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...formData,
+          honeypot: honeypotValue,
+        }),
+      })
 
-      // Call onSuccess callback if provided
-      if (onSuccess) {
-        onSuccess()
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
       }
 
-      // Reset form
+      const data = await response.json()
+
+      // Formulario enviado con éxito
+      setFormSubmitted(true)
+
+      // Llamar al callback de éxito si se proporciona
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess()
+        }, 2000)
+      }
+
+      // Resetear formulario
       setFormData({
         name: "",
         email: "",
@@ -64,8 +88,8 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
         message: "",
       })
     } catch (error) {
-      console.error("Error submitting form:", error)
-      setFormError(true)
+      console.error("Error al enviar formulario:", error)
+      setFormError(error instanceof Error ? error.message : "Error desconocido")
     } finally {
       setIsSubmitting(false)
     }
@@ -77,13 +101,16 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
         <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertTitle>¡Mensaje enviado!</AlertTitle>
-          <AlertDescription>Hemos recibido tu mensaje. Nos pondremos en contacto contigo pronto.</AlertDescription>
+          <AlertDescription>
+            Hemos recibido tu mensaje. Te hemos enviado una confirmación por correo electrónico y nos pondremos en
+            contacto contigo pronto.
+          </AlertDescription>
         </Alert>
       ) : formError ? (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
-          <AlertDescription>Hubo un problema al enviar tu mensaje. Por favor, intenta nuevamente.</AlertDescription>
+          <AlertDescription>{formError}</AlertDescription>
         </Alert>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -153,6 +180,26 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
               onChange={handleInputChange}
             />
           </div>
+
+          {/* Campo honeypot - invisible para usuarios reales, pero los bots lo llenarán */}
+          <input
+            ref={honeypotRef}
+            type="text"
+            name="website"
+            tabIndex={-1}
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              width: "1px",
+              height: "1px",
+              padding: "0",
+              margin: "-1px",
+              overflow: "hidden",
+              clip: "rect(0, 0, 0, 0)",
+              whiteSpace: "nowrap",
+              border: "0",
+            }}
+          />
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? (

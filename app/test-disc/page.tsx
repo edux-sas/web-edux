@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
@@ -7,8 +9,38 @@ import DiscTrainingBanner from "@/components/disc-training-banner"
 import CertificationSection from "@/components/certification-section"
 import TalentBoostSection from "@/components/talent-boost-section"
 import { ContactModal } from "@/components/contact-modal"
+import { useEffect, useState } from "react"
 
 export default function TestDiscPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    // Verificar autenticación al cargar la página
+    const checkAuth = () => {
+      const userData = localStorage.getItem("eduXUser")
+      if (userData) {
+        try {
+          const user = JSON.parse(userData)
+          setIsAuthenticated(!!user.isLoggedIn)
+        } catch (e) {
+          console.error("Error parsing user data:", e)
+          setIsAuthenticated(false)
+        }
+      } else {
+        setIsAuthenticated(false)
+      }
+    }
+
+    checkAuth()
+
+    // Agregar un event listener para detectar cambios en localStorage
+    window.addEventListener("storage", checkAuth)
+
+    return () => {
+      window.removeEventListener("storage", checkAuth)
+    }
+  }, [])
+
   const plans = [
     {
       id: "professional",
@@ -96,7 +128,9 @@ export default function TestDiscPage() {
                 />
               ) : (
                 <Button asChild className="w-full">
-                  <Link href={`/test-disc/checkout/${plan.id}`}>{plan.cta}</Link>
+                  <Link href={isAuthenticated ? `/dashboard` : `/test-disc/checkout/${plan.id}`}>
+                    {isAuthenticated ? "Ver mi Dashboard" : plan.cta}
+                  </Link>
                 </Button>
               )}
             </CardFooter>
@@ -104,6 +138,7 @@ export default function TestDiscPage() {
         ))}
       </div>
 
+      {/* Resto del contenido... */}
       {/* Video Explicativo */}
       <div className="mt-20">
         <h2 className="text-2xl font-bold text-center mb-8">Conoce nuestro test DISC</h2>

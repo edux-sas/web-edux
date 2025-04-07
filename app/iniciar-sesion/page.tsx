@@ -48,8 +48,10 @@ export default function LoginPage() {
         }),
       )
 
-      // Redirigir al dashboard
-      router.push("/dashboard")
+      // Redirigir al dashboard o a la página especificada en la URL
+      const params = new URLSearchParams(window.location.search)
+      const redirectUrl = params.get("redirect") || "/dashboard"
+      router.push(redirectUrl)
     } catch (error) {
       console.error("Error al iniciar sesión:", error)
 

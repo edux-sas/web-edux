@@ -89,7 +89,7 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$59.99",
+      price: "$169.000 COP",
     },
     enterprise: {
       name: "Empresarial",

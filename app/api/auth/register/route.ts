@@ -50,8 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener datos del cuerpo de la solicitud
-    const requestData = await request.json()
-    console.log("Datos recibidos:", JSON.stringify(requestData))
+    const requestData = await request.json()   
 
     const { email, password, userData } = requestData
 
@@ -109,6 +108,13 @@ export async function POST(request: NextRequest) {
 
         // Generar un nombre de usuario único basado en el email
         const username = email.split("@")[0] + Math.floor(Math.random() * 1000)
+
+        console.log(`Intentando crear usuario en Moodle con los siguientes datos:`, {
+          username,
+          firstname,
+          lastname,
+          email,
+        })
 
         // Crear usuario en Moodle e inscribirlo automáticamente en los cursos de la categoría 2
         const moodleResponse = await createMoodleUser({

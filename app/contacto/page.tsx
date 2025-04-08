@@ -42,21 +42,13 @@ export default function ContactPage() {
                     <p className="text-muted-foreground">Puedes contactarnos a través de los siguientes medios:</p>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium">Dirección</h4>
-                        <p className="text-muted-foreground">Calle Principal 123, Bogotá, Colombia</p>
-                      </div>
-                    </div>
+                  <div className="space-y-4">                    
 
                     <div className="flex items-start gap-3">
                       <Phone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-medium">Teléfono</h4>
-                        <p className="text-muted-foreground">+57 300 123 4567</p>
-                        <p className="text-muted-foreground">+57 (1) 234 5678</p>
+                        <p className="text-muted-foreground">+57 3171165904</p>                        
                       </div>
                     </div>
 
@@ -64,8 +56,7 @@ export default function ContactPage() {
                       <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-medium">Correo electrónico</h4>
-                        <p className="text-muted-foreground">info@edux.com.co</p>
-                        <p className="text-muted-foreground">soporte@edux.com.co</p>
+                        <p className="text-muted-foreground">formacionedux@gmail.com</p>                        
                       </div>
                     </div>
 
@@ -82,7 +73,7 @@ export default function ContactPage() {
                   <div className="mt-6">
                     <div className="aspect-video overflow-hidden rounded-lg border">
                       <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d254508.39280650613!2d-74.24789182453524!3d4.648625932726193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9bfd2da6cb29%3A0x239d635520a33914!2zQm9nb3TDoQ!5e0!3m2!1ses!2sco!4v1650000000000!5m2!1ses!2sco"
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.7226353396795!2d-76.53500518573602!3d3.4516465974934436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e30a6e8e04b7e29%3A0x7e725cc469d15df4!2sCali%2C%20Valle%20del%20Cauca!5e0!3m2!1ses!2sco!4v1712590000000!5m2!1ses!2sco" 
                         width="100%"
                         height="100%"
                         style={{ border: 0 }}

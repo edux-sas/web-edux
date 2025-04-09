@@ -184,6 +184,9 @@ export default function CheckoutPage() {
       return
     }
 
+    // Generar un código de referencia único para el seguimiento de la transacción
+    const referenceCode = `EDUX_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+
     // Verificar que la contraseña cumpla con los requisitos
     if (!isAuthenticated && !isPasswordValid) {
       toast({
@@ -223,6 +226,7 @@ export default function CheckoutPage() {
           cardCvc: cardData.cardCvc,
           amount,
           buyerInfo,
+          referenceCode, // Añadir el código de referencia
         })
       } else if (paymentMethod === "pse") {
         paymentResponse = await processPSEPayment({
@@ -232,6 +236,7 @@ export default function CheckoutPage() {
           docType: pseData.docType,
           docNumber: pseData.docNumber,
           buyerInfo,
+          referenceCode, // Añadir el código de referencia
         })
 
         // Si es PSE y la respuesta es exitosa, redirigir al banco
@@ -271,6 +276,7 @@ export default function CheckoutPage() {
               payment_status: paymentResponse.transactionResponse.state,
               purchase_date: purchaseDate,
               amount,
+              transaction_id: paymentResponse.transactionResponse.transactionId,
             }),
           })
 
@@ -303,6 +309,8 @@ export default function CheckoutPage() {
           payment_status: paymentResponse.transactionResponse.state,
           purchase_date: purchaseDate,
           amount,
+          transaction_id: paymentResponse.transactionResponse.transactionId,
+          reference_code: referenceCode, // Añadir el código de referencia
         },
       }
 
@@ -639,4 +647,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-

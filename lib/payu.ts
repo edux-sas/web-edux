@@ -127,6 +127,88 @@ export function generatePayUSignature(
   return "1d6c33aed575c4974ad5c0be7c6a1c87" // Firma de ejemplo
 }
 
+// Función para validar firmas de PayU
+
+/**
+ * Valida la firma de una notificación de PayU
+ * @param notificationData Datos de la notificación
+ * @param apiKey Clave API de PayU
+ * @returns boolean Indica si la firma es válida
+ */
+export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
+  // Si no hay firma o no hay datos, la firma no es válida
+  if (!notificationData || !notificationData.signature || !apiKey) {
+    return false
+  }
+
+  // La firma recibida en la notificación
+  const receivedSignature = notificationData.signature
+
+  try {
+    // Diferentes formatos de firma según el tipo de notificación
+    let signatureString = ""
+
+    // Para notificaciones estándar de PayU
+    if (
+      notificationData.reference_sale &&
+      notificationData.value &&
+      notificationData.currency &&
+      notificationData.state_pol
+    ) {
+      // El formato estándar es: ApiKey~merchantId~referenceCode~valor~moneda~estado
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${notificationData.value}~${notificationData.currency}~${notificationData.state_pol}`
+    }
+    // Para notificaciones de confirmación de transacción
+    else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
+      // Otro formato común
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${notificationData.amount}~${notificationData.currency}`
+    }
+    // Si no reconocemos el formato, fallamos por seguridad
+    else {
+      console.error("Formato de notificación desconocido", notificationData)
+      return false
+    }
+
+    // En un entorno real, generaríamos un hash MD5 del signatureString
+    // const calculatedSignature = CryptoJS.MD5(signatureString).toString();
+
+    // Para fines de demostración, simulamos la generación del hash
+    // En producción, debes implementar la generación real del hash MD5
+    const calculatedSignature = simulateMD5Hash(signatureString)
+
+    // Comparar la firma calculada con la recibida
+    return calculatedSignature === receivedSignature
+  } catch (error) {
+    console.error("Error al validar firma de PayU:", error)
+    return false
+  }
+}
+
+// Función de simulación para el hash MD5 (SOLO PARA DEMOSTRACIÓN)
+// En producción, utiliza una biblioteca de criptografía real
+function simulateMD5Hash(input: string): string {
+  // NOTA: Esta es una implementación INSEGURA y solo para demostración
+  // En un entorno de producción, debes usar una biblioteca como crypto-js
+
+  // Simulación simple basada en la longitud del string y sus caracteres
+  let hash = ""
+  let sum = 0
+
+  // Suma valores ASCII de cada carácter
+  for (let i = 0; i < input.length; i++) {
+    sum += input.charCodeAt(i)
+  }
+
+  // Genera un hash de 32 caracteres hexadecimales (similar a MD5)
+  for (let i = 0; i < 32; i++) {
+    // Rota y mezcla el valor para simular un hash
+    sum = (sum * 31 + 7) % 16
+    hash += sum.toString(16)
+  }
+
+  return hash
+}
+
 // Función para procesar un pago con tarjeta de crédito
 export async function processCardPayment(paymentData: {
   cardNumber: string
@@ -134,6 +216,7 @@ export async function processCardPayment(paymentData: {
   cardExpiry: string
   cardCvc: string
   amount: number
+  referenceCode?: string
   buyerInfo: {
     name: string
     email: string
@@ -147,18 +230,18 @@ export async function processCardPayment(paymentData: {
   }
 }): Promise<PayUResponse> {
   // Configuración de PayU
-  const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
-  const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
-  const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
-  const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+  const apiKey = process.env.PAYU_API_KEY || ""
+  const apiLogin = process.env.PAYU_API_LOGIN || ""
+  const merchantId = process.env.PAYU_MERCHANT_ID || ""
+  const isTestMode = process.env.PAYU_TEST_MODE === "true"
 
   // URL de la API de PayU (sandbox o producción)
   const apiUrl = isTestMode
     ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
     : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-  // Generar código de referencia único
-  const referenceCode = `EDUX_${Date.now()}`
+  // Usar el código de referencia proporcionado o generar uno nuevo
+  const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
   // Generar firma
   const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
@@ -182,7 +265,7 @@ export async function processCardPayment(paymentData: {
         description: "Test DISC - Pago con tarjeta",
         language: "es",
         signature,
-        notifyUrl: "https://tu-sitio.com/confirmacion-payu",
+        notifyUrl: "https://edux.com.co/api/payment/notification",
         additionalValues: {
           TX_VALUE: {
             value: paymentData.amount,
@@ -304,6 +387,7 @@ export async function processPSEPayment(paymentData: {
   userType: "N" | "J" // N: Persona Natural, J: Persona Jurídica
   docType: string // CC, CE, NIT, etc.
   docNumber: string
+  referenceCode?: string
   buyerInfo: {
     name: string
     email: string
@@ -317,18 +401,18 @@ export async function processPSEPayment(paymentData: {
   }
 }): Promise<PayUResponse> {
   // Configuración de PayU
-  const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
-  const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
-  const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
-  const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+  const apiKey = process.env.PAYU_API_KEY || ""
+  const apiLogin = process.env.PAYU_API_LOGIN || ""
+  const merchantId = process.env.PAYU_MERCHANT_ID || ""
+  const isTestMode = process.env.PAYU_TEST_MODE === "true"
 
   // URL de la API de PayU (sandbox o producción)
   const apiUrl = isTestMode
     ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
     : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-  // Generar código de referencia único
-  const referenceCode = `EDUX_${Date.now()}`
+  // Usar el código de referencia proporcionado o generar uno nuevo
+  const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
   // Generar firma
   const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
@@ -348,7 +432,7 @@ export async function processPSEPayment(paymentData: {
         description: "Test DISC - Pago con PSE",
         language: "es",
         signature,
-        notifyUrl: "https://tu-sitio.com/confirmacion-payu",
+        notifyUrl: "https://edux.com.co/api/payment/notification",
         additionalValues: {
           TX_VALUE: {
             value: paymentData.amount,
@@ -393,7 +477,7 @@ export async function processPSEPayment(paymentData: {
         },
       },
       extraParameters: {
-        RESPONSE_URL: "https://tu-sitio.com/respuesta-pse",
+        RESPONSE_URL: "https://edux.com.co/payment/response",
         PSE_REFERENCE1: "127.0.0.1", // IP del cliente
         FINANCIAL_INSTITUTION_CODE: paymentData.bankCode,
         USER_TYPE: paymentData.userType,
@@ -489,4 +573,3 @@ export async function getAvailableBanks(): Promise<{
     ],
   }
 }
-

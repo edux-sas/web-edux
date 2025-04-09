@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { createMoodleUser } from "@/lib/moodle-api"
+import { createMoodleUser } from "@/lib/moodle" // Import the createMoodleUser function
 
 // Crear un cliente de Supabase con la clave de servicio para operaciones administrativas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
@@ -57,6 +57,21 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !userData) {
       return NextResponse.json(
         { success: false, error: "Faltan datos requeridos (email, password o userData)" },
+        { status: 400 },
+      )
+    }
+
+    // Verificar que exista información de pago y que el estado sea APPROVED o PENDING
+    if (
+      !userData.payment_status ||
+      !userData.transaction_id ||
+      (userData.payment_status !== "APPROVED" && userData.payment_status !== "PENDING")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No se puede registrar al usuario sin una transacción de pago exitosa",
+        },
         { status: 400 },
       )
     }
@@ -214,4 +229,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

@@ -4,7 +4,7 @@
  */
 import axios from "axios"
 
-type MoodleUserData = {
+export type MoodleUserData = {
   username: string
   password: string
   firstname: string
@@ -475,4 +475,3 @@ export async function testMoodleConnection(): Promise<MoodleResponse<any>> {
     }
   }
 }
-

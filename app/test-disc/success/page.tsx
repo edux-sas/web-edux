@@ -117,7 +117,7 @@ export default function SuccessPage() {
                       ? "Tu cuenta de la plataforma de cursos ha sido creada correctamente."
                       : "Tu cuenta ha sido creada, pero hubo un problema con la plataforma de cursos. Nuestro equipo lo resolverá pronto."}
                   </p>
-                  {moodleStatus.username && (
+                  {moodleStatus?.username && (
                     <div className="mt-2">
                       <p className="font-medium mb-1">Tu nombre de usuario para la plataforma Moodle es:</p>
                       <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded">
@@ -183,4 +183,3 @@ export default function SuccessPage() {
     </div>
   )
 }
-

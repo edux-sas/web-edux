@@ -399,7 +399,23 @@ export default function CheckoutPage() {
 
       // Guardar el estado de la integración con Moodle
       if (registerResult.moodle) {
+        console.log("Guardando estado de Moodle en localStorage:", registerResult.moodle)
         localStorage.setItem("moodleRegistrationStatus", JSON.stringify(registerResult.moodle))
+
+        // Si hay un nombre de usuario de Moodle, asegurarnos de que se guarde en el objeto de usuario
+        if (registerResult.moodle.username) {
+          const userData = {
+            id: user.id,
+            name: formData.name,
+            email: formData.email,
+            isLoggedIn: true,
+            plan: planId,
+            moodle_username: registerResult.moodle.username,
+          }
+
+          console.log("Guardando usuario con moodle_username en localStorage:", userData)
+          localStorage.setItem("eduXUser", JSON.stringify(userData))
+        }
       }
 
       // Redirigir a página de éxito

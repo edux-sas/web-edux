@@ -243,6 +243,8 @@ export async function enrollUserInCategoryCourses(userId: number, categoryId: nu
   }
 }
 
+// Revisar la función que crea usuarios en Moodle para asegurarnos de que está devolviendo el nombre de usuario correctamente
+
 /**
  * Crea un usuario en Moodle a través de la API Web Services
  */
@@ -300,6 +302,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
     }
 
     console.log(`✅ Usuario creado en Moodle con ID: ${userId}`)
+    console.log(`✅ Nombre de usuario de Moodle: ${userData.username}`)
 
     // Siempre inscribir al usuario en los cursos de la categoría 2 (Formación DISC)
     const categoryId = 2 // Categoría "Formación DISC" por defecto
@@ -323,7 +326,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
         ...result,
         ...enrollmentResult.data,
       },
-      username: userData.username, // Devolver el nombre de usuario generado
+      username: userData.username, // Asegurarnos de devolver el nombre de usuario
     }
   } catch (error) {
     console.error("Error al crear usuario en Moodle:", error)

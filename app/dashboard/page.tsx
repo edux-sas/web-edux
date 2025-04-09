@@ -505,7 +505,12 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">No disponible</p>
+                    <div>
+                      <p className="text-muted-foreground">No disponible</p>
+                      <p className="text-xs text-amber-500 mt-1">
+                        (El nombre de usuario se mostrará al iniciar sesión en Moodle)
+                      </p>
+                    </div>
                   )}
                 </div>
                 <div className="space-y-1">
@@ -562,4 +567,3 @@ export default function DashboardPage() {
     </div>
   )
 }
-

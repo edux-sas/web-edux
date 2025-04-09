@@ -176,6 +176,8 @@ export async function POST(request: NextRequest) {
 
           // Actualizar el usuario en Supabase con el nombre de usuario de Moodle
           if (moodleUsername) {
+            console.log(`Intentando guardar moodle_username '${moodleUsername}' para el usuario ${authData.user.id}`)
+
             // Actualizar en la tabla users
             const { error: updateError } = await supabaseAdmin
               .schema("api")
@@ -185,8 +187,23 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error("Error al actualizar moodle_username en la tabla users:", updateError)
+              console.error("Detalles del error:", JSON.stringify(updateError, null, 2))
             } else {
               console.log(`✅ Moodle username '${moodleUsername}' guardado en la tabla users`)
+
+              // Verificar que se guardó correctamente
+              const { data: userData, error: getUserError } = await supabaseAdmin
+                .schema("api")
+                .from("users")
+                .select("moodle_username")
+                .eq("id", authData.user.id)
+                .single()
+
+              if (getUserError) {
+                console.error("Error al verificar moodle_username:", getUserError)
+              } else {
+                console.log(`Verificación: moodle_username en la base de datos = ${userData?.moodle_username}`)
+              }
             }
 
             // También actualizar los metadatos del usuario
@@ -196,6 +213,7 @@ export async function POST(request: NextRequest) {
 
             if (metadataError) {
               console.error("Error al actualizar metadatos del usuario:", metadataError)
+              console.error("Detalles del error:", JSON.stringify(metadataError, null, 2))
             } else {
               console.log(`✅ Moodle username '${moodleUsername}' guardado en los metadatos del usuario`)
             }

@@ -65,6 +65,7 @@ export default function Header() {
 
   const routes = [
     { href: "/test-disc", label: "Test DISC" },
+    { href: "/sie", label: "SIE" },
     { href: "/sobre-nosotros", label: "Sobre Nosotros" },
     { href: "/contacto", label: "Contacto" },
   ]
@@ -72,6 +73,7 @@ export default function Header() {
   const dashboardRoutes = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/test-disc", label: "Test DISC" },
+    { href: "/sie", label: "SIE" },
   ]
 
   // Get initials from user name
@@ -188,6 +190,20 @@ export default function Header() {
                       >
                         Dashboard
                       </Link>
+                      <Link
+                        href="/test-disc"
+                        className="text-sm font-medium transition-colors hover:text-primary"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        Test DISC
+                      </Link>
+                      <Link
+                        href="/sie"
+                        className="text-sm font-medium transition-colors hover:text-primary"
+                        onClick={() => setIsOpen(false)}
+                      >
+                        SIE
+                      </Link>
                       <div className="h-px bg-border my-2" />
                       <Button
                         variant="ghost"
@@ -239,4 +255,3 @@ export default function Header() {
     </header>
   )
 }
-

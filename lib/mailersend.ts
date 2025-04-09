@@ -23,19 +23,56 @@ export async function sendContactConfirmation(name: string, email: string, subje
       .setTo(recipients)
       .setSubject("Hemos recibido tu mensaje - eduX Academy")
       .setHtml(`
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0ea5e9;">Gracias por contactarnos</h2>
-          <p>Hola ${name},</p>
-          <p>Hemos recibido tu mensaje y te responderemos a la brevedad posible.</p>
-          <p>Estos son los detalles de tu mensaje:</p>
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p><strong>Asunto:</strong> ${subject}</p>
-            <p><strong>Mensaje:</strong></p>
-            <p>${message.replace(/\n/g, "<br>")}</p>
-          </div>
-          <p>Saludos cordiales,</p>
-          <p>El equipo de eduX Academy</p>
-        </div>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Confirmación de Contacto</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f9fafb; color: #1f2937;">
+          <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-top: 20px; margin-bottom: 20px;">
+            <!-- Header -->
+            <tr>
+              <td style="background-color: #0ea5e9; padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">eduX Academy</h1>
+              </td>
+            </tr>
+            
+            <!-- Content -->
+            <tr>
+              <td style="padding: 30px 20px;">
+                <h2 style="color: #0ea5e9; margin-top: 0;">¡Gracias por contactarnos!</h2>
+                <p style="margin-bottom: 20px; line-height: 1.6;">Hola <strong>${name}</strong>,</p>
+                <p style="margin-bottom: 20px; line-height: 1.6;">Hemos recibido tu mensaje y te responderemos a la brevedad posible. Nuestro equipo está trabajando para brindarte la mejor atención.</p>
+                <p style="margin-bottom: 20px; line-height: 1.6;">Estos son los detalles de tu mensaje:</p>
+                
+                <table style="width: 100%; background-color: #f8fafc; border-radius: 6px; margin-bottom: 20px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 15px;">
+                      <p style="margin: 0 0 10px 0;"><strong>Asunto:</strong> ${subject}</p>
+                      <p style="margin: 0 0 10px 0;"><strong>Mensaje:</strong></p>
+                      <p style="margin: 0; white-space: pre-line;">${message.replace(/\n/g, "<br>")}</p>
+                    </td>
+                  </tr>
+                </table>
+                
+                <p style="margin-bottom: 10px; line-height: 1.6;">Si tienes alguna pregunta adicional, no dudes en responder a este correo.</p>
+                <p style="margin-bottom: 20px; line-height: 1.6;">Saludos cordiales,</p>
+                <p style="margin-bottom: 10px; line-height: 1.6;"><strong>El equipo de eduX Academy</strong></p>
+              </td>
+            </tr>
+            
+            <!-- Footer -->
+            <tr>
+              <td style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX Academy. Todos los derechos reservados.</p>
+                <p style="margin: 0;">Este es un correo automático, por favor no respondas directamente a este mensaje.</p>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `)
 
     const response = await mailerSend.email.send(emailParams)
@@ -47,7 +84,7 @@ export async function sendContactConfirmation(name: string, email: string, subje
   }
 }
 
-// Función para enviar notificación al administrador
+// Actualizar la función sendAdminNotification con una plantilla HTML más profesional
 export async function sendAdminNotification(
   name: string,
   email: string,
@@ -65,19 +102,57 @@ export async function sendAdminNotification(
       .setReplyTo(email, name)
       .setSubject(`Nuevo mensaje de contacto: ${subject}`)
       .setHtml(`
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0ea5e9;">Nuevo mensaje de contacto</h2>
-          <p>Se ha recibido un nuevo mensaje a través del formulario de contacto:</p>
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p><strong>Nombre:</strong> ${name}</p>
-            <p><strong>Email:</strong> ${email}</p>
-            ${phone ? `<p><strong>Teléfono:</strong> ${phone}</p>` : ""}
-            <p><strong>Asunto:</strong> ${subject}</p>
-            <p><strong>Mensaje:</strong></p>
-            <p>${message.replace(/\n/g, "<br>")}</p>
-          </div>
-          <p>Puedes responder directamente a este correo para contactar al remitente.</p>
-        </div>
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Nuevo Mensaje de Contacto</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f9fafb; color: #1f2937;">
+          <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-top: 20px; margin-bottom: 20px;">
+            <!-- Header -->
+            <tr>
+              <td style="background-color: #0ea5e9; padding: 30px 20px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Nuevo Mensaje de Contacto</h1>
+              </td>
+            </tr>
+            
+            <!-- Content -->
+            <tr>
+              <td style="padding: 30px 20px;">
+                <h2 style="color: #0ea5e9; margin-top: 0;">Detalles del mensaje</h2>
+                <p style="margin-bottom: 20px; line-height: 1.6;">Se ha recibido un nuevo mensaje a través del formulario de contacto:</p>
+                
+                <table style="width: 100%; background-color: #f8fafc; border-radius: 6px; margin-bottom: 20px; border-collapse: collapse;">
+                  <tr>
+                    <td style="padding: 15px;">
+                      <p style="margin: 0 0 10px 0;"><strong>Nombre:</strong> ${name}</p>
+                      <p style="margin: 0 0 10px 0;"><strong>Email:</strong> <a href="mailto:${email}" style="color: #0ea5e9; text-decoration: none;">${email}</a></p>
+                      ${phone ? `<p style="margin: 0 0 10px 0;"><strong>Teléfono:</strong> <a href="tel:${phone}" style="color: #0ea5e9; text-decoration: none;">${phone}</a></p>` : ""}
+                      <p style="margin: 0 0 10px 0;"><strong>Asunto:</strong> ${subject}</p>
+                      <p style="margin: 0 0 10px 0;"><strong>Mensaje:</strong></p>
+                      <p style="margin: 0; white-space: pre-line;">${message.replace(/\n/g, "<br>")}</p>
+                    </td>
+                  </tr>
+                </table>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                  <a href="mailto:${email}" style="display: inline-block; background-color: #0ea5e9; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Responder al remitente</a>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Footer -->
+            <tr>
+              <td style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
+                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX Academy. Todos los derechos reservados.</p>
+                <p style="margin: 0;">Puedes responder directamente a este correo para contactar al remitente.</p>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `)
 
     const response = await mailerSend.email.send(emailParams)
@@ -147,4 +222,3 @@ export function getSubjectFromId(subjectId: string): string {
 
   return subjects[subjectId] || "Consulta general"
 }
-

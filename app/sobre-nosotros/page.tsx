@@ -3,36 +3,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Target, Clock, CheckCircle, Lightbulb, Heart, TrendingUp } from "lucide-react"
+import { Target, Clock, CheckCircle, Lightbulb, Heart, TrendingUp, Award, Trophy, Users, Star } from "lucide-react"
 
 export default function AboutUsPage() {
-  const teamMembers = [
-    {
-      name: "Jaime Diego Gutierrez",
-      role: "Fundador y CEO",
-      bio: "Con más de 15 años de experiencia en educación y desarrollo profesional, Jaime fundó eduX con la visión de transformar la forma en que las personas aprenden y crecen profesionalmente.",
-      image: "/images/team-leadership.png",
-    },
-    {
-      name: "Carlos Mendoza",
-      role: "Director Académico",
-      bio: "Doctor en Psicología Organizacional, Carlos ha dedicado su carrera a investigar y aplicar metodologías innovadoras de aprendizaje y desarrollo de habilidades blandas.",
-      image: "/images/team-project-management.png",
-    },
-    {
-      name: "Ana Valencia",
-      role: "Directora de Tecnología",
-      bio: "Ingeniera de software con especialización en e-learning, Ana lidera el desarrollo de nuestra plataforma educativa y las herramientas de evaluación DISC.",
-      image: "/images/team-leadership.png",
-    },
-    {
-      name: "Javier Torres",
-      role: "Director de Contenidos",
-      bio: "Con experiencia en diseño instruccional y pedagogía, Javier supervisa la creación de todos nuestros cursos para garantizar la máxima calidad y efectividad.",
-      image: "/images/team-project-management.png",
-    },
-  ]
-
   const values = [
     {
       icon: <Lightbulb className="h-8 w-8 text-primary" />,
@@ -102,7 +75,7 @@ export default function AboutUsPage() {
       {/* Hero Section */}
       <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
         <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_450px]">
+          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_550px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Sobre eduX </h1>
@@ -111,10 +84,7 @@ export default function AboutUsPage() {
                   alta calidad y herramientas de evaluación como el Test DISC.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button asChild size="lg">
-                  <Link href="/cursos">Explorar Cursos</Link>
-                </Button>
+              <div className="flex flex-col gap-2 min-[400px]:flex-row">                
                 <Button asChild variant="outline" size="lg">
                   <Link href="/contacto">Contactar</Link>
                 </Button>
@@ -123,7 +93,7 @@ export default function AboutUsPage() {
             <div className="flex items-center justify-center">
               <div className="relative aspect-video overflow-hidden rounded-xl shadow-lg">
                 <Image
-                  src="/images/edux-building-hologram.png"
+                  src="/images/edux-academia-virtual.png"
                   alt="eduX Academia Virtual"
                   width={800}
                   height={450}
@@ -197,35 +167,55 @@ export default function AboutUsPage() {
         </div>
       </section>
 
-      {/* Team */}
+      {/* Nuestro Enfoque */}
       <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestro Equipo</h2>
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestro Enfoque</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Conoce a los profesionales apasionados que hacen posible eduX Academy.
+                Combinamos metodologías innovadoras con tecnología de vanguardia para ofrecer una experiencia educativa
+                transformadora.
               </p>
             </div>
           </div>
-          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4 mt-12">
-            {teamMembers.map((member, index) => (
-              <Card key={index} className="overflow-hidden">
-                <div className="aspect-square relative overflow-hidden">
-                  <Image
-                    src={member.image || "/placeholder.svg"}
-                    alt={member.name}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold">{member.name}</h3>
-                  <p className="text-primary font-medium mb-2">{member.role}</p>
-                  <p className="text-sm text-muted-foreground">{member.bio}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 mt-12">
+            <div className="relative overflow-hidden rounded-lg shadow-lg">
+              <Image
+                src="/images/metodologia-innovadora.png"
+                alt="Metodología Innovadora"
+                width={600}
+                height={400}
+                className="object-cover w-full h-full"
+              />
+            </div>
+            <div className="flex flex-col justify-center space-y-4">
+              <h3 className="text-2xl font-bold">Metodología Centrada en Resultados</h3>
+              <p className="text-muted-foreground">
+                Nuestro enfoque pedagógico se basa en el aprendizaje activo y la aplicación práctica de conocimientos.
+                Combinamos teoría con ejercicios prácticos, estudios de caso y proyectos reales para garantizar que
+                nuestros estudiantes no solo adquieran conocimientos, sino que desarrollen habilidades aplicables
+                inmediatamente en su entorno profesional.
+              </p>
+              <ul className="space-y-2">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                  <span>Aprendizaje basado en proyectos reales</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                  <span>Evaluación continua y retroalimentación personalizada</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                  <span>Integración de herramientas tecnológicas avanzadas</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
+                  <span>Acompañamiento durante todo el proceso de aprendizaje</span>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
@@ -286,6 +276,89 @@ export default function AboutUsPage() {
         </div>
       </section>
 
+      {/* Reconocimientos */}
+      <section className="w-full py-12 md:py-24 lg:py-32">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center justify-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Reconocimientos</h2>
+              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                Nuestro compromiso con la excelencia educativa ha sido reconocido por diversas instituciones.
+              </p>
+            </div>
+          </div>
+          <div className="mx-auto max-w-5xl mt-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card className="p-6">
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Award className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Excelencia Educativa 2023</h3>
+                      <p className="text-muted-foreground">Cámara de Comercio</p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Reconocimiento por nuestra contribución a la formación profesional y el desarrollo de talento en la
+                    región.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-6">
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Trophy className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Innovación Tecnológica</h3>
+                      <p className="text-muted-foreground">Ministerio de Tecnologías de la Información</p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Premio a la implementación de soluciones tecnológicas innovadoras en el ámbito educativo.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-6">
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Users className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Impacto Social</h3>
+                      <p className="text-muted-foreground">Fundación Educativa Nacional</p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Reconocimiento por nuestro compromiso con la democratización del acceso a educación de calidad.
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="p-6">
+                <CardContent className="p-0 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 rounded-full bg-primary/10">
+                      <Star className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Calidad Formativa</h3>
+                      <p className="text-muted-foreground">Asociación de Instituciones Educativas</p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">
+                    Distinción por la excelencia en nuestros programas formativos y metodologías de enseñanza.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="w-full py-12 md:py-24 lg:py-32 bg-gradient-to-r from-blue-500 to-cyan-400">
         <div className="container px-4 md:px-6">
@@ -298,10 +371,7 @@ export default function AboutUsPage() {
                 Comienza tu viaje de aprendizaje y desarrollo profesional con eduX Academy.
               </p>
             </div>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-white/90">
-                <Link href="/registro">Crear Cuenta Gratis</Link>
-              </Button>
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">              
               <Button
                 asChild
                 variant="outline"
@@ -317,4 +387,3 @@ export default function AboutUsPage() {
     </div>
   )
 }
-

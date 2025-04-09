@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,6 +24,9 @@ export function PageContactForm() {
     message: "",
   })
 
+  // Campo honeypot para detectar bots (invisible para usuarios reales)
+  const honeypotRef = useRef<HTMLInputElement>(null)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -39,13 +42,19 @@ export function PageContactForm() {
     setFormError(null)
 
     try {
+      // Verificar si el campo honeypot está lleno (indicaría un bot)
+      const honeypotValue = honeypotRef.current?.value
+
       // Enviar datos al endpoint
       const response = await fetch("/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          honeypot: honeypotValue,
+        }),
       })
 
       if (!response.ok) {
@@ -163,6 +172,26 @@ export function PageContactForm() {
               />
             </div>
 
+            {/* Campo honeypot - invisible para usuarios reales, pero los bots lo llenarán */}
+            <input
+              ref={honeypotRef}
+              type="text"
+              name="website"
+              tabIndex={-1}
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                width: "1px",
+                height: "1px",
+                padding: "0",
+                margin: "-1px",
+                overflow: "hidden",
+                clip: "rect(0, 0, 0, 0)",
+                whiteSpace: "nowrap",
+                border: "0",
+              }}
+            />
+
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
@@ -179,4 +208,3 @@ export function PageContactForm() {
     </Card>
   )
 }
-

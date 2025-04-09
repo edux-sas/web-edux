@@ -55,7 +55,7 @@ export type PaymentEvent = {
     reference?: string
   }): PaymentEvent[] {
     return recentEvents.filter((event) => {
-      // Filtrar por tipo
+      // Filtrar por tip
       if (criteria.type && !event.type.includes(criteria.type)) {
         return false
       }

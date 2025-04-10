@@ -357,10 +357,47 @@ export async function processCardPayment(paymentData: {
     }
 
     const data = await response.json()
+
+    // Verificar que la respuesta tenga la estructura esperada
+    if (!data || !data.code) {
+      console.error("Respuesta de PayU inválida:", data)
+      throw new Error("Respuesta de pago inválida. Por favor, intenta nuevamente.")
+    }
+
+    // Si hay un error en la respuesta de PayU, formatearlo adecuadamente
+    if (data.code !== "SUCCESS") {
+      const errorMessage =
+        data.error ||
+        (data.transactionResponse && data.transactionResponse.responseMessage) ||
+        "Error en el procesamiento del pago"
+      console.error("Error en respuesta de PayU:", errorMessage, data)
+
+      // Asegurar que la respuesta tenga una estructura consistente incluso en caso de error
+      return {
+        code: data.code,
+        error: errorMessage,
+        transactionResponse: data.transactionResponse || {
+          state: "DECLINED",
+          responseMessage: errorMessage,
+          responseCode: "ERROR",
+        },
+      }
+    }
+
     return data
   } catch (error) {
     console.error("Error al procesar el pago con PayU:", error)
-    throw error
+
+    // Devolver un objeto con estructura consistente en caso de error
+    return {
+      code: "ERROR",
+      error: error instanceof Error ? error.message : "Error desconocido en el procesamiento del pago",
+      transactionResponse: {
+        state: "ERROR",
+        responseMessage: error instanceof Error ? error.message : "Error desconocido",
+        responseCode: "SYSTEM_ERROR",
+      },
+    }
   }
 }
 

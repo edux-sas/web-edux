@@ -279,11 +279,17 @@ export default function CheckoutPage() {
 
       // Verificar si el pago fue exitoso
       if (
+        !paymentResponse ||
         paymentResponse.code !== "SUCCESS" ||
+        !paymentResponse.transactionResponse ||
         (paymentResponse.transactionResponse.state !== "APPROVED" &&
           paymentResponse.transactionResponse.state !== "PENDING")
       ) {
-        throw new Error(paymentResponse.transactionResponse.responseMessage || "Error en el pago")
+        const errorMessage =
+          paymentResponse?.transactionResponse?.responseMessage ||
+          paymentResponse?.error ||
+          "Error en el procesamiento del pago. Por favor, intenta nuevamente."
+        throw new Error(errorMessage)
       }
 
       // Fecha actual para el registro de la compra

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard, Info } from "lucide-react"
+import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
@@ -522,35 +522,6 @@ export default function CheckoutPage() {
   return (
     <div className="container py-12 max-w-5xl">
       <h1 className="text-2xl font-bold mb-8 text-center">Checkout - Test DISC {plan.name}</h1>
-
-      {isTestMode && (
-        <Alert className="mb-6 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
-          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-          <AlertTitle>Modo de prueba activado</AlertTitle>
-          <AlertDescription>
-            <p>
-              Estás en modo de prueba. Puedes usar las siguientes tarjetas de prueba para simular diferentes escenarios:
-            </p>
-            <ul className="mt-2 space-y-1 text-sm">
-              <li>
-                <span className="font-mono">4111111111111111</span> - Pago aprobado
-              </li>
-              <li>
-                <span className="font-mono">4000000000000002</span> - Pago rechazado
-              </li>
-              <li>
-                <span className="font-mono">4000000000000119</span> - Pago pendiente
-              </li>
-              <li>
-                <span className="font-mono">4000000000000127</span> - Error en el procesamiento
-              </li>
-            </ul>
-            <p className="mt-2 text-sm">
-              Para todas las tarjetas, usa cualquier fecha futura, cualquier CVC de 3 dígitos y cualquier nombre.
-            </p>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {isCheckingConnection ? (
         <div className="flex justify-center items-center py-8">

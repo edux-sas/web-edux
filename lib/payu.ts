@@ -1,3 +1,5 @@
+import crypto from "crypto"
+
 // Tipos para la integración con PayU
 export type PayUTransaction = {
   order: {
@@ -37,6 +39,36 @@ export type PayUTransaction = {
         phone: string
       }
     }
+    payer: {
+      merchantPayerId?: string
+      fullName: string
+      emailAddress: string
+      contactPhone: string
+      dniNumber: string
+      billingAddress: {
+        street1: string
+        street2?: string
+        city: string
+        state: string
+        country: string
+        postalCode: string
+        phone: string
+      }
+    }
+    creditCard?: {
+      number: string
+      securityCode: string
+      expirationDate: string
+      name: string
+    }
+    extraParameters?: Record<string, string>
+    type: string
+    paymentMethod: string
+    paymentCountry: string
+    deviceSessionId: string
+    ipAddress: string
+    cookie: string
+    userAgent: string
   }
   payer: {
     merchantPayerId?: string
@@ -110,7 +142,7 @@ export type PayUResponse = {
   }
 }
 
-// Función para generar la firma de PayU
+// Función para generar la firma de PayU usando MD5
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -118,23 +150,14 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
-  // En un entorno real, deberías usar una biblioteca de hash como crypto-js
-  // Aquí simulamos la generación de la firma para el ejemplo
+  // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
   const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${amount}~${currency}`
 
-  // Esta es una simulación, en producción usarías:
-  // return CryptoJS.MD5(signatureString).toString();
-  return "1d6c33aed575c4974ad5c0be7c6a1c87" // Firma de ejemplo
+  // Generar el hash MD5
+  return crypto.createHash("md5").update(signatureString).digest("hex")
 }
 
 // Función para validar firmas de PayU
-
-/**
- * Valida la firma de una notificación de PayU
- * @param notificationData Datos de la notificación
- * @param apiKey Clave API de PayU
- * @returns boolean Indica si la firma es válida
- */
 export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
   if (!notificationData || !notificationData.signature || !apiKey) {
@@ -169,12 +192,8 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       return false
     }
 
-    // En un entorno real, generaríamos un hash MD5 del signatureString
-    // const calculatedSignature = CryptoJS.MD5(signatureString).toString();
-
-    // Para fines de demostración, simulamos la generación del hash
-    // En producción, debes implementar la generación real del hash MD5
-    const calculatedSignature = simulateMD5Hash(signatureString)
+    // Generar el hash MD5 del signatureString
+    const calculatedSignature = crypto.createHash("md5").update(signatureString).digest("hex")
 
     // Comparar la firma calculada con la recibida
     return calculatedSignature === receivedSignature
@@ -182,31 +201,6 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
     console.error("Error al validar firma de PayU:", error)
     return false
   }
-}
-
-// Función de simulación para el hash MD5 (SOLO PARA DEMOSTRACIÓN)
-// En producción, utiliza una biblioteca de criptografía real
-function simulateMD5Hash(input: string): string {
-  // NOTA: Esta es una implementación INSEGURA y solo para demostración
-  // En un entorno de producción, debes usar una biblioteca como crypto-js
-
-  // Simulación simple basada en la longitud del string y sus caracteres
-  let hash = ""
-  let sum = 0
-
-  // Suma valores ASCII de cada carácter
-  for (let i = 0; i < input.length; i++) {
-    sum += input.charCodeAt(i)
-  }
-
-  // Genera un hash de 32 caracteres hexadecimales (similar a MD5)
-  for (let i = 0; i < 32; i++) {
-    // Rota y mezcla el valor para simular un hash
-    sum = (sum * 31 + 7) % 16
-    hash += sum.toString(16)
-  }
-
-  return hash
 }
 
 // Función para procesar un pago con tarjeta de crédito
@@ -250,6 +244,24 @@ export async function processCardPayment(paymentData: {
   const [month, year] = paymentData.cardExpiry.split("/")
   const formattedExpiry = `20${year}/${month}`
 
+  // Determinar el tipo de tarjeta basado en el primer dígito
+  const cardFirstDigit = paymentData.cardNumber.charAt(0)
+  let paymentMethod = "VISA" // Por defecto
+
+  if (cardFirstDigit === "4") {
+    paymentMethod = "VISA"
+  } else if (cardFirstDigit === "5") {
+    paymentMethod = "MASTERCARD"
+  } else if (cardFirstDigit === "3") {
+    paymentMethod = "AMEX"
+  } else if (cardFirstDigit === "6") {
+    paymentMethod = "DINERS"
+  }
+
+  // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
+  const taxBase = Math.round(paymentData.amount / 1.19)
+  const taxValue = paymentData.amount - taxBase
+
   // Construir la solicitud para PayU
   const payuRequest: PayURequest = {
     language: "es",
@@ -262,7 +274,7 @@ export async function processCardPayment(paymentData: {
       order: {
         accountId: merchantId,
         referenceCode,
-        description: "Test DISC - Pago con tarjeta",
+        description: "Pago eduX - Tarjeta de crédito",
         language: "es",
         signature,
         notifyUrl: "https://edux.com.co/api/payment/notification",
@@ -272,11 +284,11 @@ export async function processCardPayment(paymentData: {
             currency: "COP",
           },
           TX_TAX: {
-            value: Math.round((paymentData.amount * 0.19) / 1.19), // Cálculo del IVA (19%)
+            value: taxValue, // IVA ya incluido en el precio
             currency: "COP",
           },
           TX_TAX_RETURN_BASE: {
-            value: Math.round(paymentData.amount / 1.19), // Base gravable
+            value: taxBase, // Base gravable
             currency: "COP",
           },
         },
@@ -319,61 +331,33 @@ export async function processCardPayment(paymentData: {
         INSTALLMENTS_NUMBER: "1", // Número de cuotas
       },
       type: "AUTHORIZATION_AND_CAPTURE",
-      paymentMethod: "VISA", // Esto debería determinarse según el número de tarjeta
+      paymentMethod,
       paymentCountry: "CO",
-      deviceSessionId: "vghs6tvkcle931686k1900o6e1", // Esto debería generarse dinámicamente
+      deviceSessionId: crypto.randomBytes(16).toString("hex"), // Generamos un ID de sesión aleatorio
       ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
-      cookie: "pt1t38347bs6jc9ruv2ecpv7o2", // Esto debería ser la cookie real
-      userAgent: navigator.userAgent,
+      cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
+      userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
     },
     test: isTestMode,
   }
 
   try {
-    // En un entorno real, enviarías esta solicitud a PayU
-    // const response = await fetch(apiUrl, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Accept': 'application/json'
-    //   },
-    //   body: JSON.stringify(payuRequest)
-    // });
-
-    // const data = await response.json();
-    // return data;
-
-    // Para este ejemplo, simulamos una respuesta exitosa
-    return {
-      code: "SUCCESS",
-      error: null,
-      transactionResponse: {
-        orderId: 1400449660,
-        transactionId: "aa2f50b2-62a8-42de-b3be-c6fe08ec712f",
-        state: "APPROVED",
-        paymentNetworkResponseCode: "81",
-        paymentNetworkResponseErrorMessage: null,
-        trazabilityCode: "CRED - 666039677",
-        authorizationCode: "123238",
-        pendingReason: null,
-        responseCode: "APPROVED",
-        errorCode: null,
-        responseMessage: "Aprobado",
-        transactionDate: null,
-        transactionTime: null,
-        operationDate: Date.now(),
-        extraParameters: {
-          BANK_REFERENCED_CODE: "CREDIT",
-        },
-        additionalInfo: {
-          paymentNetwork: "CREDIBANCO",
-          rejectionType: "NONE",
-          responseNetworkMessage: null,
-          cardType: "CREDIT",
-          transactionType: "AUTHORIZATION_AND_CAPTURE",
-        },
+    // Enviar la solicitud a PayU
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
+      body: JSON.stringify(payuRequest),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
     }
+
+    const data = await response.json()
+    return data
   } catch (error) {
     console.error("Error al procesar el pago con PayU:", error)
     throw error
@@ -384,8 +368,8 @@ export async function processCardPayment(paymentData: {
 export async function processPSEPayment(paymentData: {
   amount: number
   bankCode: string
-  userType: "N" | "J" // N: Persona Natural, J: Persona Jurídica
-  docType: string // CC, CE, NIT, etc.
+  userType: "N" | "J"
+  docType: string
   docNumber: string
   referenceCode?: string
   buyerInfo: {
@@ -417,21 +401,24 @@ export async function processPSEPayment(paymentData: {
   // Generar firma
   const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
 
-  // Construir la solicitud para PayU
+  // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
+  const taxBase = Math.round(paymentData.amount / 1.19)
+  const taxValue = paymentData.amount - taxBase
+
   const payuRequest: PayURequest = {
     language: "es",
     command: "SUBMIT_TRANSACTION",
     merchant: {
-      apiKey,
-      apiLogin,
+      apiKey: apiKey,
+      apiLogin: apiLogin,
     },
     transaction: {
       order: {
         accountId: merchantId,
-        referenceCode,
-        description: "Test DISC - Pago con PSE",
+        referenceCode: referenceCode,
+        description: "Pago eduX - PSE",
         language: "es",
-        signature,
+        signature: signature,
         notifyUrl: "https://edux.com.co/api/payment/notification",
         additionalValues: {
           TX_VALUE: {
@@ -439,11 +426,11 @@ export async function processPSEPayment(paymentData: {
             currency: "COP",
           },
           TX_TAX: {
-            value: Math.round((paymentData.amount * 0.19) / 1.19), // Cálculo del IVA (19%)
+            value: taxValue,
             currency: "COP",
           },
           TX_TAX_RETURN_BASE: {
-            value: Math.round(paymentData.amount / 1.19), // Base gravable
+            value: taxBase,
             currency: "COP",
           },
         },
@@ -466,7 +453,7 @@ export async function processPSEPayment(paymentData: {
         fullName: paymentData.buyerInfo.name,
         emailAddress: paymentData.buyerInfo.email,
         contactPhone: paymentData.buyerInfo.phone,
-        dniNumber: paymentData.buyerInfo.document,
+        dniNumber: paymentData.docNumber,
         billingAddress: {
           street1: paymentData.buyerInfo.address,
           city: paymentData.buyerInfo.city,
@@ -478,98 +465,102 @@ export async function processPSEPayment(paymentData: {
       },
       extraParameters: {
         RESPONSE_URL: "https://edux.com.co/payment/response",
-        PSE_REFERENCE1: "127.0.0.1", // IP del cliente
         FINANCIAL_INSTITUTION_CODE: paymentData.bankCode,
         USER_TYPE: paymentData.userType,
-        PSE_REFERENCE2: paymentData.docType,
+        PSE_REFERENCE1: paymentData.docNumber,
+        PSE_REFERENCE2: paymentData.docNumber,
         PSE_REFERENCE3: paymentData.docNumber,
+        paymentMethod: "PSE",
       },
       type: "AUTHORIZATION_AND_CAPTURE",
       paymentMethod: "PSE",
       paymentCountry: "CO",
-      deviceSessionId: "vghs6tvkcle931686k1900o6e1", // Esto debería generarse dinámicamente
+      deviceSessionId: crypto.randomBytes(16).toString("hex"),
       ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
-      cookie: "pt1t38347bs6jc9ruv2ecpv7o2", // Esto debería ser la cookie real
-      userAgent: navigator.userAgent,
+      cookie: crypto.randomBytes(16).toString("hex"),
+      userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
     },
     test: isTestMode,
   }
 
   try {
-    // En un entorno real, enviarías esta solicitud a PayU
-    // const response = await fetch(apiUrl, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //     'Accept': 'application/json'
-    //   },
-    //   body: JSON.stringify(payuRequest)
-    // });
-
-    // const data = await response.json();
-    // return data;
-
-    // Para este ejemplo, simulamos una respuesta de PSE
-    return {
-      code: "SUCCESS",
-      error: null,
-      transactionResponse: {
-        orderId: 1400449959,
-        transactionId: "4d49e544-e23f-474e-92b1-59357e0e85e8",
-        state: "PENDING",
-        paymentNetworkResponseCode: null,
-        paymentNetworkResponseErrorMessage: null,
-        trazabilityCode: "2204682",
-        authorizationCode: null,
-        pendingReason: "AWAITING_NOTIFICATION",
-        responseCode: "PENDING_TRANSACTION_CONFIRMATION",
-        errorCode: null,
-        responseMessage: null,
-        transactionDate: null,
-        transactionTime: null,
-        operationDate: Date.now(),
-        extraParameters: {
-          TRANSACTION_CYCLE: "1",
-          BANK_URL:
-            "https://sandbox.api.payulatam.com/payments-api/pse-caller?enc=aHR0cHM6Ly9yZWdpc3Ryby5kZXNhcnJvbGxvLnBzZS5jb20uY28vUFNFVXNlclJlZ2lzdGVyL1N0YXJ0VHJhbnNhY3Rpb24uYXNweD9lbmM9dG5QY0pITUtsU25tUnBITThmQWJ1NHVWTmt6YW92Q0tWR2g0b0IxbEpkOXNEeGlSU2E5cXl1Uk5TUW5mbkxSdiMjcGF5ZXJfdGVzdEB0ZXN0LmNvbSMjMTIzNDU2Nzg5IyNDQw==",
-        },
-        additionalInfo: {
-          paymentNetwork: "PSE",
-          rejectionType: "NONE",
-          responseNetworkMessage: null,
-          travelAgencyAuthorizationCode: null,
-          cardType: null,
-          transactionType: "AUTHORIZATION_AND_CAPTURE",
-        },
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
       },
+      body: JSON.stringify(payuRequest),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
     }
+
+    const data = await response.json()
+    return data
   } catch (error) {
     console.error("Error al procesar el pago con PSE:", error)
     throw error
   }
 }
 
-// Función para consultar los bancos disponibles para PSE
+// Función para obtener los bancos disponibles para PSE
 export async function getAvailableBanks(): Promise<{
-  banks: Array<{
-    description: string
-    pseCode: string
-  }>
+  success: boolean
+  banks: Array<{ description: string; pseCode: string }>
 }> {
-  // En un entorno real, consultarías la API de PayU
-  // Aquí simulamos una respuesta con algunos bancos comunes
-  return {
-    banks: [
-      { description: "Bancolombia", pseCode: "1022" },
-      { description: "Banco de Bogotá", pseCode: "1001" },
-      { description: "Davivienda", pseCode: "1051" },
-      { description: "Banco de Occidente", pseCode: "1023" },
-      { description: "BBVA Colombia", pseCode: "1013" },
-      { description: "Banco AV Villas", pseCode: "1052" },
-      { description: "Banco Popular", pseCode: "1002" },
-      { description: "Banco Caja Social", pseCode: "1032" },
-      { description: "Scotiabank Colpatria", pseCode: "1019" },
-      { description: "Banco Agrario", pseCode: "1040" },
-    ],
+  // Configuración de PayU
+  const apiKey = process.env.PAYU_API_KEY || ""
+  const apiLogin = process.env.PAYU_API_LOGIN || ""
+  const isTestMode = process.env.PAYU_TEST_MODE === "true"
+
+  // URL de la API de PayU (sandbox o producción)
+  const apiUrl = isTestMode
+    ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
+    : "https://api.payulatam.com/payments-api/4.0/service.cgi"
+
+  const request = {
+    language: "es",
+    command: "GET_BANKS_LIST",
+    merchant: {
+      apiKey: apiKey,
+      apiLogin: apiLogin,
+    },
+    test: isTestMode,
+    pseFinancialInstitutionCode: "",
+    pseReference1: "",
+    pseReference2: "",
+    pseReference3: "",
+  }
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Error al obtener bancos: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    if (data.code !== "SUCCESS") {
+      throw new Error(`Error al obtener bancos: ${data.error}`)
+    }
+
+    const banks = data.banks.map((bank: any) => ({
+      description: bank.bankName,
+      pseCode: bank.pseCode,
+    }))
+
+    return { success: true, banks: banks }
+  } catch (error) {
+    console.error("Error al obtener bancos:", error)
+    return { success: false, banks: [] }
   }
 }

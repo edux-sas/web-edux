@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Loader2, Check, X } from "lucide-react"
+import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
 import { PaymentMethods } from "@/components/payment-methods"
-import { processCardPayment, processPSEPayment } from "@/lib/payu"
+import { processCardPayment } from "@/lib/payu"
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -36,6 +36,13 @@ export default function CheckoutPage() {
     password: "",
     confirmPassword: "",
     terms: false,
+    phone: "", // Añadido campo de teléfono
+    document: "", // Añadido campo de documento
+    address: "", // Añadido campo de dirección
+    city: "Bogotá", // Valor por defecto
+    state: "Bogotá D.C.", // Valor por defecto
+    country: "CO", // Valor por defecto
+    postalCode: "000000", // Valor por defecto
   })
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
@@ -59,6 +66,7 @@ export default function CheckoutPage() {
   })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -184,6 +192,19 @@ export default function CheckoutPage() {
       return
     }
 
+    // Verificar campos adicionales si están visibles
+    if (showAdditionalFields) {
+      if (!formData.phone || !formData.document || !formData.address) {
+        toast({
+          title: "Información incompleta",
+          description: "Por favor completa todos los campos de información de contacto.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+    }
+
     // Generar un código de referencia único para el seguimiento de la transacción
     const referenceCode = `EDUX_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
@@ -206,21 +227,24 @@ export default function CheckoutPage() {
       const buyerInfo = {
         name: formData.name,
         email: formData.email,
-        phone: "7563126", // Deberías recopilar este dato
-        document: pseData.docNumber || "123456789", // Usar el documento de PSE o uno por defecto
-        address: "Dirección de ejemplo", // Deberías recopilar este dato
-        city: "Bogotá",
-        state: "Bogotá D.C.",
-        country: "CO",
-        postalCode: "000000",
+        phone: formData.phone || "7563126", // Usar el teléfono ingresado o uno por defecto
+        document: formData.document || pseData.docNumber || "123456789", // Usar el documento ingresado o uno por defecto
+        address: formData.address || "Dirección de ejemplo", // Usar la dirección ingresada o una por defecto
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        postalCode: formData.postalCode,
       }
 
       // Monto del pago
       const amount = plan.priceValue
 
+      // Limpiar número de tarjeta (quitar espacios)
+      const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+
       if (paymentMethod === "card") {
         paymentResponse = await processCardPayment({
-          cardNumber: cardData.cardNumber,
+          cardNumber: cleanCardNumber,
           cardName: cardData.cardName,
           cardExpiry: cardData.cardExpiry,
           cardCvc: cardData.cardCvc,
@@ -228,7 +252,9 @@ export default function CheckoutPage() {
           buyerInfo,
           referenceCode, // Añadir el código de referencia
         })
-      } else if (paymentMethod === "pse") {
+      }
+      /* PSE está oculto pero mantenemos el código para uso futuro
+      else if (paymentMethod === "pse") {
         paymentResponse = await processPSEPayment({
           amount,
           bankCode: pseData.bankCode,
@@ -249,6 +275,7 @@ export default function CheckoutPage() {
           return
         }
       }
+      */
 
       // Verificar si el pago fue exitoso
       if (
@@ -305,6 +332,13 @@ export default function CheckoutPage() {
         userData: {
           name: formData.name,
           email: formData.email,
+          phone: formData.phone,
+          document: formData.document,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          country: formData.country,
+          postalCode: formData.postalCode,
           plan: planId,
           payment_status: paymentResponse.transactionResponse.state,
           purchase_date: purchaseDate,
@@ -440,7 +474,7 @@ export default function CheckoutPage() {
       supabaseStatus?.connected === true &&
       (paymentMethod === "card"
         ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-        : pseData.bankCode && pseData.docNumber)
+        : false) // PSE está oculto
     : formData.email &&
       formData.name &&
       formData.password &&
@@ -449,7 +483,8 @@ export default function CheckoutPage() {
       supabaseStatus?.connected === true &&
       (paymentMethod === "card"
         ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-        : pseData.bankCode && pseData.docNumber)
+        : false) && // PSE está oculto
+      (!showAdditionalFields || (formData.phone && formData.document && formData.address))
 
   // Componente para mostrar el estado de validación de la contraseña
   const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
@@ -585,17 +620,73 @@ export default function CheckoutPage() {
                             </div>
                           </>
                         )}
+
+                        {/* Botón para mostrar/ocultar campos adicionales */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => setShowAdditionalFields(!showAdditionalFields)}
+                        >
+                          {showAdditionalFields ? "Ocultar información adicional" : "Añadir información de contacto"}
+                        </Button>
+
+                        {/* Campos adicionales */}
+                        {showAdditionalFields && (
+                          <div className="space-y-4 border p-4 rounded-md">
+                            <h4 className="font-medium">Información de Contacto</h4>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Teléfono</Label>
+                              <Input
+                                id="phone"
+                                name="phone"
+                                placeholder="300 123 4567"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="document">Número de Documento</Label>
+                              <Input
+                                id="document"
+                                name="document"
+                                placeholder="1234567890"
+                                value={formData.document}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="address">Dirección</Label>
+                              <Input
+                                id="address"
+                                name="address"
+                                placeholder="Calle 123 # 45-67"
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <Separator />
 
                       {/* Métodos de pago */}
-                      <PaymentMethods
-                        onMethodChange={handlePaymentMethodChange}
-                        onCardDataChange={handleCardDataChange}
-                        onPSEDataChange={handlePSEDataChange}
-                        disabled={!supabaseStatus?.connected}
-                      />
+                      <div>
+                        <h3 className="font-medium mb-4">Información de Pago</h3>
+                        <PaymentMethods
+                          onMethodChange={handlePaymentMethodChange}
+                          onCardDataChange={handleCardDataChange}
+                          onPSEDataChange={handlePSEDataChange}
+                          disabled={!supabaseStatus?.connected}
+                        />
+                      </div>
 
                       {/* Términos y condiciones */}
                       <div className="flex items-center space-x-2">
@@ -613,49 +704,68 @@ export default function CheckoutPage() {
                           </a>
                         </Label>
                       </div>
+
+                      {/* Mensaje de seguridad */}
+                      <div className="flex items-center p-3 bg-green-50 rounded-md text-sm">
+                        <ShieldCheck className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                        <p className="text-green-700">Tus datos están protegidos con encriptación de grado bancario.</p>
+                      </div>
                     </div>
                   </form>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Resumen de compra con posición fija en desktop */}
             <div className="md:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Resumen de Compra</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span>Test DISC {plan.name}</span>
-                      <span>
-                        {plan.price} {plan.priceCurrency}
-                      </span>
+              <div className="md:sticky md:top-24">
+                <Card className="border-2">
+                  <CardHeader className="bg-primary text-primary-foreground rounded-t-lg">
+                    <CardTitle>Resumen de Compra</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="flex justify-between">
+                        <span>Test DISC {plan.name}</span>
+                        <span>
+                          {plan.price} {plan.priceCurrency}
+                        </span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-bold">
+                        <span>Total</span>
+                        <span>
+                          {plan.price} {plan.priceCurrency}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        <p>Precio incluye IVA del 19%</p>
+                      </div>
                     </div>
-                    <Separator />
-                    <div className="flex justify-between font-bold">
-                      <span>Total</span>
-                      <span>
-                        {plan.price} {plan.priceCurrency}
-                      </span>
+                  </CardContent>
+                  <CardFooter className="flex flex-col gap-4">
+                    <Button className="w-full" onClick={handleSubmit} disabled={loading || !isFormValid}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Procesando...
+                        </>
+                      ) : !supabaseStatus?.connected ? (
+                        "No disponible"
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Completar Compra
+                        </>
+                      )}
+                    </Button>
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Pago seguro procesado por PayU Latam</span>
                     </div>
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full" onClick={handleSubmit} disabled={loading || !isFormValid}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : !supabaseStatus?.connected ? (
-                      "No disponible"
-                    ) : (
-                      "Completar Compra"
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
+                  </CardFooter>
+                </Card>
+              </div>
             </div>
           </div>
         </>

@@ -7,9 +7,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CreditCard, Building2, AlertCircle } from "lucide-react"
-import { getAvailableBanks } from "@/lib/payu"
+import { CreditCard } from "lucide-react"
 
 interface PaymentMethodsProps {
   onMethodChange: (method: string) => void
@@ -40,7 +38,8 @@ export function PaymentMethods({
     docNumber: "",
   })
 
-  // Cargar bancos disponibles para PSE
+  // Cargar bancos disponibles para PSE - Comentado pero mantenido para uso futuro
+  /*
   useEffect(() => {
     const loadBanks = async () => {
       setLoading(true)
@@ -58,6 +57,7 @@ export function PaymentMethods({
       loadBanks()
     }
   }, [paymentMethod])
+  */
 
   // Notificar cambio de método de pago
   useEffect(() => {
@@ -67,7 +67,34 @@ export function PaymentMethods({
   // Manejar cambios en datos de tarjeta
   const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    const newCardData = { ...cardData, [name]: value }
+
+    // Formateo específico para cada campo
+    let formattedValue = value
+
+    // Formatear número de tarjeta: añadir espacios cada 4 dígitos
+    if (name === "cardNumber") {
+      formattedValue = value
+        .replace(/\s/g, "")
+        .replace(/(.{4})/g, "$1 ")
+        .trim()
+      formattedValue = formattedValue.substring(0, 19) // Limitar a 16 dígitos + 3 espacios
+    }
+
+    // Formatear fecha de expiración: añadir / después de los primeros 2 dígitos
+    if (name === "cardExpiry") {
+      formattedValue = value.replace(/\//g, "")
+      if (formattedValue.length > 2) {
+        formattedValue = formattedValue.substring(0, 2) + "/" + formattedValue.substring(2, 4)
+      }
+      formattedValue = formattedValue.substring(0, 5) // Limitar a MM/YY
+    }
+
+    // Limitar CVC a 3-4 dígitos
+    if (name === "cardCvc") {
+      formattedValue = value.replace(/\D/g, "").substring(0, 4)
+    }
+
+    const newCardData = { ...cardData, [name]: formattedValue }
     setCardData(newCardData)
 
     if (onCardDataChange) {
@@ -75,7 +102,8 @@ export function PaymentMethods({
     }
   }
 
-  // Manejar cambios en datos de PSE
+  // Manejar cambios en datos de PSE - Comentado pero mantenido para uso futuro
+  /*
   const handlePSEChange = (field: string, value: string) => {
     const newPSEData = { ...pseData, [field]: value }
     setPseData(newPSEData)
@@ -84,6 +112,7 @@ export function PaymentMethods({
       onPSEDataChange(newPSEData)
     }
   }
+  */
 
   return (
     <div className="space-y-6">
@@ -102,6 +131,7 @@ export function PaymentMethods({
               Tarjeta de Crédito/Débito
             </Label>
           </div>
+          {/* Opción de PSE oculta pero mantenida para uso futuro
           <div className="flex items-center space-x-2 border rounded-md p-3">
             <RadioGroupItem value="pse" id="pse" />
             <Label htmlFor="pse" className="flex items-center gap-2 cursor-pointer">
@@ -109,6 +139,7 @@ export function PaymentMethods({
               PSE - Débito bancario
             </Label>
           </div>
+          */}
         </RadioGroup>
       </div>
 
@@ -121,11 +152,13 @@ export function PaymentMethods({
               <Input
                 id="cardName"
                 name="cardName"
-                placeholder="Nombre completo"
+                placeholder="Nombre completo como aparece en la tarjeta"
                 value={cardData.cardName}
                 onChange={handleCardChange}
                 required
                 disabled={disabled}
+                className="focus:border-primary"
+                autoComplete="cc-name"
               />
             </div>
             <div className="space-y-2">
@@ -138,6 +171,8 @@ export function PaymentMethods({
                 onChange={handleCardChange}
                 required
                 disabled={disabled}
+                className="font-mono focus:border-primary"
+                autoComplete="cc-number"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -151,10 +186,12 @@ export function PaymentMethods({
                   onChange={handleCardChange}
                   required
                   disabled={disabled}
+                  className="font-mono focus:border-primary"
+                  autoComplete="cc-exp"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="cardCvc">CVC</Label>
+                <Label htmlFor="cardCvc">CVC/CVV</Label>
                 <Input
                   id="cardCvc"
                   name="cardCvc"
@@ -163,14 +200,20 @@ export function PaymentMethods({
                   onChange={handleCardChange}
                   required
                   disabled={disabled}
+                  className="font-mono focus:border-primary"
+                  autoComplete="cc-csc"
+                  type="password"
                 />
               </div>
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              <p>Tus datos de pago están seguros y encriptados.</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Formulario de PSE */}
+      {/* Formulario de PSE - Comentado pero mantenido para uso futuro 
       {paymentMethod === "pse" && (
         <Card>
           <CardContent className="pt-6 space-y-4">
@@ -262,7 +305,7 @@ export function PaymentMethods({
           </CardContent>
         </Card>
       )}
+      */}
     </div>
   )
 }
-

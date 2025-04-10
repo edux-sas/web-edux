@@ -223,81 +223,116 @@ export async function processCardPayment(paymentData: {
     postalCode: string
   }
 }): Promise<PayUResponse> {
-  // Configuración de PayU
-  const apiKey = process.env.PAYU_API_KEY || ""
-  const apiLogin = process.env.PAYU_API_LOGIN || ""
-  const merchantId = process.env.PAYU_MERCHANT_ID || ""
-  const isTestMode = process.env.PAYU_TEST_MODE === "true"
+  try {
+    // Configuración de PayU - Usar las variables de entorno correctas
+    const apiKey = process.env.PAYU_API_KEY || ""
+    const apiLogin = process.env.PAYU_API_LOGIN || ""
+    const merchantId = process.env.PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.PAYU_TEST_MODE === "true"
 
-  // URL de la API de PayU (sandbox o producción)
-  const apiUrl = isTestMode
-    ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
-    : "https://api.payulatam.com/payments-api/4.0/service.cgi"
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin || !merchantId) {
+      console.error("Credenciales de PayU no configuradas correctamente:", {
+        apiKey: apiKey ? "Definido" : "No definido",
+        apiLogin: apiLogin ? "Definido" : "No definido",
+        merchantId: merchantId ? "Definido" : "No definido",
+      })
 
-  // Usar el código de referencia proporcionado o generar uno nuevo
-  const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
+      return {
+        code: "ERROR",
+        error: "Credenciales de PayU no configuradas correctamente. Contacta al administrador.",
+        transactionResponse: {
+          state: "ERROR",
+          responseMessage: "Credenciales de PayU no configuradas",
+          responseCode: "ERROR",
+        },
+      }
+    }
 
-  // Generar firma
-  const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
+    // URL de la API de PayU (sandbox o producción)
+    const apiUrl = isTestMode
+      ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
+      : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-  // Formatear fecha de expiración (MM/YYYY a YYYY/MM)
-  const [month, year] = paymentData.cardExpiry.split("/")
-  const formattedExpiry = `20${year}/${month}`
+    // Usar el código de referencia proporcionado o generar uno nuevo
+    const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
-  // Determinar el tipo de tarjeta basado en el primer dígito
-  const cardFirstDigit = paymentData.cardNumber.charAt(0)
-  let paymentMethod = "VISA" // Por defecto
+    // Generar firma
+    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
 
-  if (cardFirstDigit === "4") {
-    paymentMethod = "VISA"
-  } else if (cardFirstDigit === "5") {
-    paymentMethod = "MASTERCARD"
-  } else if (cardFirstDigit === "3") {
-    paymentMethod = "AMEX"
-  } else if (cardFirstDigit === "6") {
-    paymentMethod = "DINERS"
-  }
+    // Formatear fecha de expiración (MM/YYYY a YYYY/MM)
+    const [month, year] = paymentData.cardExpiry.split("/")
+    const formattedExpiry = `20${year}/${month}`
 
-  // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
-  const taxBase = Math.round(paymentData.amount / 1.19)
-  const taxValue = paymentData.amount - taxBase
+    // Determinar el tipo de tarjeta basado en el primer dígito
+    const cardFirstDigit = paymentData.cardNumber.charAt(0)
+    let paymentMethod = "VISA" // Por defecto
 
-  // Construir la solicitud para PayU
-  const payuRequest: PayURequest = {
-    language: "es",
-    command: "SUBMIT_TRANSACTION",
-    merchant: {
-      apiKey,
-      apiLogin,
-    },
-    transaction: {
-      order: {
-        accountId: merchantId,
-        referenceCode,
-        description: "Pago eduX - Tarjeta de crédito",
-        language: "es",
-        signature,
-        notifyUrl: "https://edux.com.co/api/payment/notification",
-        additionalValues: {
-          TX_VALUE: {
-            value: paymentData.amount,
-            currency: "COP",
+    if (cardFirstDigit === "4") {
+      paymentMethod = "VISA"
+    } else if (cardFirstDigit === "5") {
+      paymentMethod = "MASTERCARD"
+    } else if (cardFirstDigit === "3") {
+      paymentMethod = "AMEX"
+    } else if (cardFirstDigit === "6") {
+      paymentMethod = "DINERS"
+    }
+
+    // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
+    const taxBase = Math.round(paymentData.amount / 1.19)
+    const taxValue = paymentData.amount - taxBase
+
+    // Construir la solicitud para PayU
+    const payuRequest: PayURequest = {
+      language: "es",
+      command: "SUBMIT_TRANSACTION",
+      merchant: {
+        apiKey,
+        apiLogin,
+      },
+      transaction: {
+        order: {
+          accountId: merchantId,
+          referenceCode,
+          description: "Pago eduX - Tarjeta de crédito",
+          language: "es",
+          signature,
+          notifyUrl: "https://edux.com.co/api/payment/notification",
+          additionalValues: {
+            TX_VALUE: {
+              value: paymentData.amount,
+              currency: "COP",
+            },
+            TX_TAX: {
+              value: taxValue, // IVA ya incluido en el precio
+              currency: "COP",
+            },
+            TX_TAX_RETURN_BASE: {
+              value: taxBase, // Base gravable
+              currency: "COP",
+            },
           },
-          TX_TAX: {
-            value: taxValue, // IVA ya incluido en el precio
-            currency: "COP",
-          },
-          TX_TAX_RETURN_BASE: {
-            value: taxBase, // Base gravable
-            currency: "COP",
+          buyer: {
+            fullName: paymentData.buyerInfo.name,
+            emailAddress: paymentData.buyerInfo.email,
+            contactPhone: paymentData.buyerInfo.phone,
+            dniNumber: paymentData.buyerInfo.document,
+            shippingAddress: {
+              street1: paymentData.buyerInfo.address,
+              city: paymentData.buyerInfo.city,
+              state: paymentData.buyerInfo.state,
+              country: paymentData.buyerInfo.country,
+              postalCode: paymentData.buyerInfo.postalCode,
+              phone: paymentData.buyerInfo.phone,
+            },
           },
         },
-        buyer: {
+        payer: {
           fullName: paymentData.buyerInfo.name,
           emailAddress: paymentData.buyerInfo.email,
           contactPhone: paymentData.buyerInfo.phone,
           dniNumber: paymentData.buyerInfo.document,
-          shippingAddress: {
+          billingAddress: {
             street1: paymentData.buyerInfo.address,
             city: paymentData.buyerInfo.city,
             state: paymentData.buyerInfo.state,
@@ -306,42 +341,35 @@ export async function processCardPayment(paymentData: {
             phone: paymentData.buyerInfo.phone,
           },
         },
-      },
-      payer: {
-        fullName: paymentData.buyerInfo.name,
-        emailAddress: paymentData.buyerInfo.email,
-        contactPhone: paymentData.buyerInfo.phone,
-        dniNumber: paymentData.buyerInfo.document,
-        billingAddress: {
-          street1: paymentData.buyerInfo.address,
-          city: paymentData.buyerInfo.city,
-          state: paymentData.buyerInfo.state,
-          country: paymentData.buyerInfo.country,
-          postalCode: paymentData.buyerInfo.postalCode,
-          phone: paymentData.buyerInfo.phone,
+        creditCard: {
+          number: paymentData.cardNumber,
+          securityCode: paymentData.cardCvc,
+          expirationDate: formattedExpiry,
+          name: paymentData.cardName,
         },
+        extraParameters: {
+          INSTALLMENTS_NUMBER: "1", // Número de cuotas
+        },
+        type: "AUTHORIZATION_AND_CAPTURE",
+        paymentMethod,
+        paymentCountry: "CO",
+        deviceSessionId: crypto.randomBytes(16).toString("hex"), // Generamos un ID de sesión aleatorio
+        ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
+        cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
+        userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
       },
-      creditCard: {
-        number: paymentData.cardNumber,
-        securityCode: paymentData.cardCvc,
-        expirationDate: formattedExpiry,
-        name: paymentData.cardName,
-      },
-      extraParameters: {
-        INSTALLMENTS_NUMBER: "1", // Número de cuotas
-      },
-      type: "AUTHORIZATION_AND_CAPTURE",
-      paymentMethod,
-      paymentCountry: "CO",
-      deviceSessionId: crypto.randomBytes(16).toString("hex"), // Generamos un ID de sesión aleatorio
-      ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
-      cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
-      userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
-    },
-    test: isTestMode,
-  }
+      test: isTestMode,
+    }
 
-  try {
+    console.log("Enviando solicitud a PayU:", {
+      url: apiUrl,
+      apiKey: apiKey ? "Definido" : "No definido",
+      apiLogin: apiLogin ? "Definido" : "No definido",
+      merchantId: merchantId ? "Definido" : "No definido",
+      isTestMode,
+      referenceCode,
+    })
+
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -353,6 +381,10 @@ export async function processCardPayment(paymentData: {
     })
 
     if (!response.ok) {
+      console.error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      console.error("Respuesta de error completa:", errorText)
+
       throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
     }
 

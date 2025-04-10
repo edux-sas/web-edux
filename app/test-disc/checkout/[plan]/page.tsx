@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard } from "lucide-react"
+import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
@@ -67,6 +67,7 @@ export default function CheckoutPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [showAdditionalFields, setShowAdditionalFields] = useState(false)
+  const [isTestMode, setIsTestMode] = useState(false)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -99,6 +100,9 @@ export default function CheckoutPage() {
         console.error("Error parsing user data", e)
       }
     }
+
+    // Verificar si estamos en modo de prueba
+    setIsTestMode(process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true")
   }, [])
 
   // Validar contraseña cuando cambia
@@ -241,6 +245,14 @@ export default function CheckoutPage() {
 
       // Limpiar número de tarjeta (quitar espacios)
       const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+
+      // Imprimir las credenciales que se están usando para depuración
+      console.log("Credenciales PayU que se están usando:", {
+        NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
+        NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "No definido",
+        NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "No definido",
+        NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
+      })
 
       if (paymentMethod === "card") {
         paymentResponse = await processCardPayment({
@@ -511,6 +523,35 @@ export default function CheckoutPage() {
     <div className="container py-12 max-w-5xl">
       <h1 className="text-2xl font-bold mb-8 text-center">Checkout - Test DISC {plan.name}</h1>
 
+      {isTestMode && (
+        <Alert className="mb-6 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800">
+          <Info className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          <AlertTitle>Modo de prueba activado</AlertTitle>
+          <AlertDescription>
+            <p>
+              Estás en modo de prueba. Puedes usar las siguientes tarjetas de prueba para simular diferentes escenarios:
+            </p>
+            <ul className="mt-2 space-y-1 text-sm">
+              <li>
+                <span className="font-mono">4111111111111111</span> - Pago aprobado
+              </li>
+              <li>
+                <span className="font-mono">4000000000000002</span> - Pago rechazado
+              </li>
+              <li>
+                <span className="font-mono">4000000000000119</span> - Pago pendiente
+              </li>
+              <li>
+                <span className="font-mono">4000000000000127</span> - Error en el procesamiento
+              </li>
+            </ul>
+            <p className="mt-2 text-sm">
+              Para todas las tarjetas, usa cualquier fecha futura, cualquier CVC de 3 dígitos y cualquier nombre.
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {isCheckingConnection ? (
         <div className="flex justify-center items-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
@@ -772,6 +813,7 @@ export default function CheckoutPage() {
                         </>
                       )}
                     </Button>
+
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <ShieldCheck className="h-4 w-4" />
                       <span>Pago seguro procesado por PayU Latam</span>

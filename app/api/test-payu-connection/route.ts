@@ -3,10 +3,10 @@ import { NextResponse } from "next/server"
 export async function GET() {
   try {
     // Obtener las credenciales de PayU
-    const apiKey = process.env.PAYU_API_KEY || ""
-    const apiLogin = process.env.PAYU_API_LOGIN || ""
-    const merchantId = process.env.PAYU_MERCHANT_ID || ""
-    const isTestMode = process.env.PAYU_TEST_MODE === "true"
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
     // Verificar que las credenciales estén definidas
     if (!apiKey || !apiLogin || !merchantId) {

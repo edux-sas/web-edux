@@ -224,11 +224,11 @@ export async function processCardPayment(paymentData: {
   }
 }): Promise<PayUResponse> {
   try {
-    // Configuración de PayU - Usar las variables de entorno correctas
-    const apiKey = process.env.PAYU_API_KEY || ""
-    const apiLogin = process.env.PAYU_API_LOGIN || ""
-    const merchantId = process.env.PAYU_MERCHANT_ID || ""
-    const isTestMode = process.env.PAYU_TEST_MODE === "true"
+    // Configuración de PayU - Usar las variables de entorno públicas
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
     // Verificar que las credenciales estén definidas
     if (!apiKey || !apiLogin || !merchantId) {
@@ -433,6 +433,8 @@ export async function processCardPayment(paymentData: {
   }
 }
 
+// Actualizar la función processPSEPayment para usar el prefijo NEXT_PUBLIC_
+
 // Función para procesar un pago con PSE
 export async function processPSEPayment(paymentData: {
   amount: number
@@ -454,10 +456,10 @@ export async function processPSEPayment(paymentData: {
   }
 }): Promise<PayUResponse> {
   // Configuración de PayU
-  const apiKey = process.env.PAYU_API_KEY || ""
-  const apiLogin = process.env.PAYU_API_LOGIN || ""
-  const merchantId = process.env.PAYU_MERCHANT_ID || ""
-  const isTestMode = process.env.PAYU_TEST_MODE === "true"
+  const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+  const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+  const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+  const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
   // URL de la API de PayU (sandbox o producción)
   const apiUrl = isTestMode
@@ -574,15 +576,17 @@ export async function processPSEPayment(paymentData: {
   }
 }
 
+// Actualizar la función getAvailableBanks para usar el prefijo NEXT_PUBLIC_
+
 // Función para obtener los bancos disponibles para PSE
 export async function getAvailableBanks(): Promise<{
   success: boolean
   banks: Array<{ description: string; pseCode: string }>
 }> {
   // Configuración de PayU
-  const apiKey = process.env.PAYU_API_KEY || ""
-  const apiLogin = process.env.PAYU_API_LOGIN || ""
-  const isTestMode = process.env.PAYU_TEST_MODE === "true"
+  const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+  const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+  const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
   // URL de la API de PayU (sandbox o producción)
   const apiUrl = isTestMode

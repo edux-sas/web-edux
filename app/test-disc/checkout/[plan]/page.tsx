@@ -367,6 +367,13 @@ export default function CheckoutPage() {
             "La clave de servicio de Supabase no está definida. Por favor, configura la variable de entorno SUPABASE_SERVICE_ROLE_KEY.",
           )
         }
+
+        // Verificar también las variables de PayU
+        if (!envCheckData.variables.NEXT_PUBLIC_PAYU_API_KEY?.includes("Definida")) {
+          throw new Error(
+            "Las credenciales de PayU no están configuradas correctamente. Por favor, verifica las variables de entorno con prefijo NEXT_PUBLIC_PAYU_.",
+          )
+        }
       } catch (envError) {
         console.error("Error al verificar variables de entorno:", envError)
         toast({

@@ -12,6 +12,11 @@ export async function GET() {
     PAYU_API_LOGIN: process.env.PAYU_API_LOGIN ? "Definida" : "No definida",
     PAYU_MERCHANT_ID: process.env.PAYU_MERCHANT_ID ? "Definida" : "No definida",
     PAYU_TEST_MODE: process.env.PAYU_TEST_MODE ? "Definida" : "No definida",
+    // Agregar las nuevas variables públicas
+    NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY ? "Definida" : "No definida",
+    NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN ? "Definida" : "No definida",
+    NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID ? "Definida" : "No definida",
+    NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE ? "Definida" : "No definida",
   }
 
   return NextResponse.json({

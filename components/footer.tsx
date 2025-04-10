@@ -1,19 +1,8 @@
-import Link from "next/link";
-import {
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  Mail,
-  Phone,
-  MapPin,
-  Globe,
-  ChevronRight,
-  Heart,
-} from "lucide-react";
+import Link from "next/link"
+import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, Globe, ChevronRight, Heart } from "lucide-react"
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = new Date().getFullYear()
 
   return (
     <footer className="w-full py-16 md:py-20 lg:py-24 bg-background border-t relative overflow-hidden">
@@ -31,10 +20,8 @@ export default function Footer() {
             </span>
           </Link>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            En eduX estamos comprometidos con la transformación digital y el
-            éxito compartido. Descubre nuestras soluciones, conecta con nuestro
-            equipo y sé parte del cambio. ¡Contáctanos y transformemos
-            juntos el futuro!
+            En eduX estamos comprometidos con la transformación digital y el éxito compartido. Descubre nuestras
+            soluciones, conecta con nuestro equipo y sé parte del cambio. ¡Contáctanos y transformemos juntos el futuro!
           </p>
           <div className="flex space-x-5 mt-8">
             <Link
@@ -77,37 +64,25 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link
-                  href="/contacto"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/contacto" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Licencias y Equipos
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/contacto"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/contacto" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Consultoría Educativa
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/contacto"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/contacto" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Desarrollo de Plataformas
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/contacto"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/contacto" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Capacitación Empresarial
                 </Link>
@@ -122,37 +97,25 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link
-                  href="/test-disc"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/test-disc" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   ¿Qué es DISC?
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/test-disc"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/test-disc" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Beneficios
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/test-disc"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/test-disc" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Precios
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/test-disc"
-                  className="text-muted-foreground hover:text-primary flex items-center group"
-                >
+                <Link href="/test-disc" className="text-muted-foreground hover:text-primary flex items-center group">
                   <ChevronRight className="h-4 w-4 mr-2 opacity-0 group-hover:opacity-100 transition-opacity" />
                   Para Empresas
                 </Link>
@@ -168,28 +131,19 @@ export default function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-primary shrink-0" />
-                <Link
-                  href="tel:+573001234567"
-                  className="text-muted-foreground hover:text-primary"
-                >
+                <Link href="tel:+573001234567" className="text-muted-foreground hover:text-primary">
                   +57 3171165904
                 </Link>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
-                <Link
-                  href="mailto:info@edux.com.co"
-                  className="text-muted-foreground hover:text-primary"
-                >
+                <Link href="mailto:info@edux.com.co" className="text-muted-foreground hover:text-primary">
                   formacionedux@gmail.com
                 </Link>
               </li>
               <li className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-primary shrink-0" />
-                <Link
-                  href="https://www.edux.com.co"
-                  className="text-muted-foreground hover:text-primary"
-                >
+                <Link href="https://www.edux.com.co" className="text-muted-foreground hover:text-primary">
                   www.edux.com.co
                 </Link>
               </li>
@@ -216,11 +170,20 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center">
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho
-            con <Heart className="h-4 w-4 text-red-500 inline" /> en Colombia
+            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho con{" "}
+            <a
+              href="https://www.v1tr0.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center hover:scale-110 transition-transform"
+              title="Visitar V1TR0"
+            >
+              <Heart className="h-4 w-4 text-red-500" />
+            </a>{" "}
+            en Colombia
           </p>
         </div>
       </div>
     </footer>
-  );
+  )
 }

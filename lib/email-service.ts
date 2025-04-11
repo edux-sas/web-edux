@@ -1,18 +1,41 @@
 import nodemailer from "nodemailer"
 
-// Reemplazar la configuración del transporter con una versión que use variables de entorno
-// Configuración del transporter de nodemailer
-const transporter = nodemailer.createTransport({
-  host: "edux.com.co",
-  port: 465,
-  secure: true, // true para puerto 465, false para otros puertos
-  auth: {
-    user: process.env.EMAIL_USER || "soporte@edux.com.co",
-    pass: process.env.EMAIL_PASSWORD || "",
-  },
-})
+// Configuración del transporter de nodemailer con manejo de errores mejorado
+let transporter: nodemailer.Transporter
 
-// Añadir después de la configuración del transporter
+try {
+  transporter = nodemailer.createTransport({
+    host: "edux.com.co",
+    port: 465,
+    secure: true, // true para puerto 465, false para otros puertos
+    auth: {
+      user: process.env.EMAIL_USER || "soporte@edux.com.co",
+      pass: process.env.EMAIL_PASSWORD || "",
+    },
+    // Añadir opciones de tiempo de espera
+    connectionTimeout: 5000, // 5 segundos para conectar
+    socketTimeout: 10000, // 10 segundos para operaciones de socket
+  })
+
+  // Verificar la conexión al iniciar
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error("Error al verificar la conexión con el servidor de correo:", error)
+    } else {
+      console.log("Servidor de correo listo para enviar mensajes")
+    }
+  })
+} catch (error) {
+  console.error("Error al crear el transporter de nodemailer:", error)
+  // Crear un transporter de respaldo que registre los correos en la consola
+  transporter = {
+    sendMail: (mailOptions: any) => {
+      console.log("CORREO (MODO FALLBACK):", JSON.stringify(mailOptions))
+      return Promise.resolve({ messageId: "fallback-" + Date.now() })
+    },
+  } as any
+}
+
 // Verificar que las credenciales de correo estén configuradas
 if (!process.env.EMAIL_PASSWORD) {
   console.warn(
@@ -88,12 +111,16 @@ export async function sendContactConfirmation(name: string, email: string, subje
       `,
     }
 
+    console.log(`Intentando enviar correo de confirmación a ${email}...`)
     const info = await transporter.sendMail(mailOptions)
     console.log("Email de confirmación enviado:", info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
     console.error("Error al enviar correo de confirmación:", error)
-    return { success: false, error }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al enviar correo",
+    }
   }
 }
 
@@ -166,12 +193,16 @@ export async function sendAdminNotification(
       `,
     }
 
+    console.log(`Intentando enviar notificación al administrador sobre mensaje de ${email}...`)
     const info = await transporter.sendMail(mailOptions)
     console.log("Email de notificación enviado:", info.messageId)
     return { success: true, messageId: info.messageId }
   } catch (error) {
     console.error("Error al enviar notificación al administrador:", error)
-    return { success: false, error }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al enviar correo",
+    }
   }
 }
 

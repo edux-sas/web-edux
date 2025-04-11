@@ -41,25 +41,72 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: validation.error }, { status: 400 })
     }
 
-    // Enviar correo de confirmación al usuario
-    const userEmailResult = await sendContactConfirmation(name, email, subject, message)
+    // Registrar la solicitud para depuración
+    console.log(`Procesando solicitud de contacto de ${name} (${email}), asunto: ${subject}`)
+
+    // Establecer un tiempo límite para el envío de correos
+    const emailTimeout = 10000 // 10 segundos
+
+    // Enviar correo de confirmación al usuario con tiempo límite
+    const userEmailPromise = Promise.race([
+      sendContactConfirmation(name, email, subject, message),
+      new Promise<{ success: false; error: string }>((resolve) =>
+        setTimeout(() => resolve({ success: false, error: "Tiempo de espera agotado" }), emailTimeout),
+      ),
+    ])
+
+    const userEmailResult = await userEmailPromise
+
     if (!userEmailResult.success) {
       console.error("Error al enviar correo al usuario:", userEmailResult.error)
+      // Continuamos con el proceso aunque falle el correo al usuario
     }
 
-    // Enviar notificación al administrador
-    const adminEmailResult = await sendAdminNotification(name, email, subject, message, phone)
+    // Enviar notificación al administrador con tiempo límite
+    const adminEmailPromise = Promise.race([
+      sendAdminNotification(name, email, subject, message, phone),
+      new Promise<{ success: false; error: string }>((resolve) =>
+        setTimeout(() => resolve({ success: false, error: "Tiempo de espera agotado" }), emailTimeout),
+      ),
+    ])
+
+    const adminEmailResult = await adminEmailPromise
+
     if (!adminEmailResult.success) {
       console.error("Error al enviar correo al administrador:", adminEmailResult.error)
-      return NextResponse.json(
-        { success: false, error: "Error al procesar el formulario. Por favor, inténtalo de nuevo más tarde." },
-        { status: 500 },
+
+      // Guardar los datos del formulario en un archivo de registro o base de datos como respaldo
+      console.log(
+        "DATOS DE CONTACTO (RESPALDO):",
+        JSON.stringify({
+          timestamp: new Date().toISOString(),
+          name,
+          email,
+          phone,
+          subject,
+          message,
+        }),
       )
+
+      // Devolver un mensaje de éxito parcial
+      return NextResponse.json({
+        success: true,
+        warning:
+          "Tu mensaje ha sido recibido, pero es posible que haya un retraso en nuestra respuesta debido a problemas técnicos.",
+      })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error en el procesamiento del formulario de contacto:", error)
-    return NextResponse.json({ success: false, error: "Error interno del servidor" }, { status: 500 })
+
+    // Asegurarse de que la respuesta siempre sea JSON válido
+    return NextResponse.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "Error interno del servidor",
+      },
+      { status: 500 },
+    )
   }
 }

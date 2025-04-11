@@ -16,6 +16,7 @@ export function PageContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formSubmitted, setFormSubmitted] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const [formWarning, setFormWarning] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",

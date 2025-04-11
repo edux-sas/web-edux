@@ -64,7 +64,6 @@ export async function GET(request: NextRequest) {
           id: message.id,
           success: false,
           error: processError instanceof Error ? processError.message : "Error desconocido",
-          stack: processError instanceof Error ? processError.stack : undefined,
         })
       }
     }

@@ -5,33 +5,22 @@ let transporter: nodemailer.Transporter
 
 try {
   transporter = nodemailer.createTransport({
-    host: "mail.edux.com.co", // Changed from edux.com.co to mail.edux.com.co
+    host: "mail.edux.com.co", // Servidor SMTP correcto
     port: 465,
-    secure: true,
+    secure: true, // true para puerto 465, false para otros puertos
     auth: {
       user: process.env.EMAIL_USER || "soporte@edux.com.co",
       pass: process.env.EMAIL_PASSWORD || "",
     },
-    tls: {
-      // Add TLS options to handle potential certificate issues
-      rejectUnauthorized: false,
-    },
-    // Increase timeouts for better reliability
-    connectionTimeout: 10000, // 10 seconds
-    socketTimeout: 20000, // 20 seconds
-    debug: true, // Enable debug mode to get detailed logs
+    // Opciones de tiempo de espera
+    connectionTimeout: 10000, // 10 segundos para conectar
+    socketTimeout: 15000, // 15 segundos para operaciones de socket
   })
 
-  // Verify connection with more detailed logging
+  // Verificar la conexión al iniciar
   transporter.verify((error, success) => {
     if (error) {
       console.error("Error al verificar la conexión con el servidor de correo:", error)
-      console.error("Detalles de configuración:", {
-        host: "mail.edux.com.co",
-        port: 465,
-        user: process.env.EMAIL_USER || "soporte@edux.com.co",
-        passLength: process.env.EMAIL_PASSWORD ? process.env.EMAIL_PASSWORD.length : 0,
-      })
     } else {
       console.log("Servidor de correo listo para enviar mensajes")
     }

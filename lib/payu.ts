@@ -150,8 +150,14 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
+  // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal
+  // PayU requiere que el monto tenga exactamente 1 decimal para la firma
+  const formattedAmount = amount.toFixed(1)
+
   // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${amount}~${currency}`
+  const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
+
+  console.log("String para firma PayU:", signatureString)
 
   // Generar el hash MD5
   return crypto.createHash("md5").update(signatureString).digest("hex")
@@ -178,13 +184,19 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       notificationData.currency &&
       notificationData.state_pol
     ) {
+      // CORRECCIÓN: Asegurarnos de que el valor tenga exactamente 1 decimal
+      const formattedValue = Number.parseFloat(notificationData.value).toFixed(1)
+
       // El formato estándar es: ApiKey~merchantId~referenceCode~valor~moneda~estado
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${notificationData.value}~${notificationData.currency}~${notificationData.state_pol}`
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
     }
     // Para notificaciones de confirmación de transacción
     else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
+      // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal
+      const formattedAmount = Number.parseFloat(notificationData.amount).toFixed(1)
+
       // Otro formato común
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${notificationData.amount}~${notificationData.currency}`
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
     }
     // Si no reconocemos el formato, fallamos por seguridad
     else {
@@ -192,8 +204,13 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       return false
     }
 
+    console.log("String para validación de firma PayU:", signatureString)
+
     // Generar el hash MD5 del signatureString
     const calculatedSignature = crypto.createHash("md5").update(signatureString).digest("hex")
+
+    console.log("Firma recibida:", receivedSignature)
+    console.log("Firma calculada:", calculatedSignature)
 
     // Comparar la firma calculada con la recibida
     return calculatedSignature === receivedSignature
@@ -256,6 +273,9 @@ export async function processCardPayment(paymentData: {
 
     // Usar el código de referencia proporcionado o generar uno nuevo
     const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
+
+    // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal para la firma
+    const formattedAmount = paymentData.amount.toFixed(1)
 
     // Generar firma
     const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
@@ -369,6 +389,11 @@ export async function processCardPayment(paymentData: {
       isTestMode,
       referenceCode,
     })
+
+    // DEPURACIÓN: Imprimir la firma generada
+    console.log("Firma generada:", signature)
+    console.log("Monto formateado para firma:", formattedAmount)
+    console.log("String para firma:", `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {
@@ -487,6 +512,9 @@ export async function processPSEPayment(paymentData: {
     // Usar el código de referencia proporcionado o generar uno nuevo
     const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
+    // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal para la firma
+    const formattedAmount = paymentData.amount.toFixed(1)
+
     // Generar firma
     const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
 
@@ -579,6 +607,11 @@ export async function processPSEPayment(paymentData: {
       isTestMode,
       referenceCode,
     })
+
+    // DEPURACIÓN: Imprimir la firma generada
+    console.log("Firma generada para PSE:", signature)
+    console.log("Monto formateado para firma PSE:", formattedAmount)
+    console.log("String para firma PSE:", `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`)
 
     const response = await fetch(apiUrl, {
       method: "POST",

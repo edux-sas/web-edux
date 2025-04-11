@@ -124,9 +124,9 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$169.0",
+      price: "$16900.0",
       priceCurrency: "COP",
-      priceValue: 1690,
+      priceValue: 16900,
     },
     enterprise: {
       name: "Empresarial",

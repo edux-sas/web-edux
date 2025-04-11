@@ -1,15 +1,24 @@
 import nodemailer from "nodemailer"
 
+// Reemplazar la configuración del transporter con una versión que use variables de entorno
 // Configuración del transporter de nodemailer
 const transporter = nodemailer.createTransport({
   host: "edux.com.co",
   port: 465,
   secure: true, // true para puerto 465, false para otros puertos
   auth: {
-    user: "soporte@edux.com.co",
-    pass: "127DRpYO<g(V",
+    user: process.env.EMAIL_USER || "soporte@edux.com.co",
+    pass: process.env.EMAIL_PASSWORD || "",
   },
 })
+
+// Añadir después de la configuración del transporter
+// Verificar que las credenciales de correo estén configuradas
+if (!process.env.EMAIL_PASSWORD) {
+  console.warn(
+    "ADVERTENCIA: La contraseña de correo electrónico no está configurada. Configure la variable de entorno EMAIL_PASSWORD.",
+  )
+}
 
 // Dirección de correo desde la que se enviarán los emails
 const FROM_EMAIL = "soporte@edux.com.co"

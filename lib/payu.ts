@@ -150,9 +150,17 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
-  // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal
-  // PayU requiere que el monto tenga exactamente 1 decimal para la firma
-  const formattedAmount = amount.toFixed(1)
+  // CORRECCIÓN: Para COP (Peso Colombiano), el monto debe ser un entero sin decimales
+  // Para otras monedas, puede variar según la documentación de PayU
+  let formattedAmount: string
+
+  if (currency === "COP") {
+    // Para pesos colombianos, redondear al entero más cercano sin decimales
+    formattedAmount = Math.round(amount).toString()
+  } else {
+    // Para otras monedas, mantener el formato con 1 decimal por defecto
+    formattedAmount = amount.toFixed(1)
+  }
 
   // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
   const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
@@ -184,16 +192,28 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       notificationData.currency &&
       notificationData.state_pol
     ) {
-      // CORRECCIÓN: Asegurarnos de que el valor tenga exactamente 1 decimal
-      const formattedValue = Number.parseFloat(notificationData.value).toFixed(1)
+      // CORRECCIÓN: Formatear el valor según la moneda
+      let formattedValue: string
+
+      if (notificationData.currency === "COP") {
+        formattedValue = Math.round(Number.parseFloat(notificationData.value)).toString()
+      } else {
+        formattedValue = Number.parseFloat(notificationData.value).toFixed(1)
+      }
 
       // El formato estándar es: ApiKey~merchantId~referenceCode~valor~moneda~estado
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
     }
     // Para notificaciones de confirmación de transacción
     else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
-      // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal
-      const formattedAmount = Number.parseFloat(notificationData.amount).toFixed(1)
+      // CORRECCIÓN: Formatear el monto según la moneda
+      let formattedAmount: string
+
+      if (notificationData.currency === "COP") {
+        formattedAmount = Math.round(Number.parseFloat(notificationData.amount)).toString()
+      } else {
+        formattedAmount = Number.parseFloat(notificationData.amount).toFixed(1)
+      }
 
       // Otro formato común
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
@@ -274,8 +294,8 @@ export async function processCardPayment(paymentData: {
     // Usar el código de referencia proporcionado o generar uno nuevo
     const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
-    // CORRECCIÓN: Asegurarnos de que el monto tenga exactamente 1 decimal para la firma
-    const formattedAmount = paymentData.amount.toFixed(1)
+    // CORRECCIÓN: Para COP, el monto debe ser un entero sin decimales
+    const formattedAmount = Math.round(paymentData.amount).toString()
 
     // Generar firma
     const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")

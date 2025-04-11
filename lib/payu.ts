@@ -142,7 +142,7 @@ export type PayUResponse = {
   }
 }
 
-// Modificar la función generatePayUSignature para formatear el monto con dos decimales siempre
+// Actualizar la función generatePayUSignature para seguir exactamente el formato de PayU
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -150,10 +150,13 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
-  // CORRECCIÓN: Formatear el monto siempre con dos decimales, incluso para COP
-  const formattedAmount = amount.toFixed(2)
+  // Formatear el monto con el formato correcto según la documentación de PayU
+  // Para valores enteros, no se incluyen decimales
+  // Para valores con decimales, se incluyen
+  const formattedAmount = Number.isInteger(amount) ? amount.toString() : amount.toFixed(2)
 
-  // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
+  // Crear el string para la firma exactamente como lo especifica PayU:
+  // ApiKey~merchantId~referenceCode~tx_value~currency
   const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
@@ -182,7 +185,7 @@ export function generatePayUSignature(
   return signature
 }
 
-// También actualizar la función validatePayUSignature para usar el mismo formato
+// Actualizar la función validatePayUSignature para usar el mismo formato
 export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
   if (!notificationData || !notificationData.signature || !apiKey) {
@@ -203,16 +206,18 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       notificationData.currency &&
       notificationData.state_pol
     ) {
-      // CORRECCIÓN: Formatear el valor siempre con dos decimales
-      const formattedValue = Number.parseFloat(notificationData.value).toFixed(2)
+      // Formatear el valor según la documentación de PayU
+      const value = Number.parseFloat(notificationData.value)
+      const formattedValue = Number.isInteger(value) ? value.toString() : value.toFixed(2)
 
       // El formato estándar es: apiKey~merchantId~referenceCode~valor~moneda~estado
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
     }
     // Para notificaciones de confirmación de transacción
     else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
-      // CORRECCIÓN: Formatear el monto siempre con dos decimales
-      const formattedAmount = Number.parseFloat(notificationData.amount).toFixed(2)
+      // Formatear el monto según la documentación de PayU
+      const amount = Number.parseFloat(notificationData.amount)
+      const formattedAmount = Number.isInteger(amount) ? amount.toString() : amount.toFixed(2)
 
       // Otro formato común
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
@@ -239,7 +244,7 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   }
 }
 
-// Actualizar también la función processCardPayment para usar el formato correcto
+// Actualizar la función processCardPayment para generar correctamente el deviceSessionId
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -293,12 +298,13 @@ export async function processCardPayment(paymentData: {
     // Usar el código de referencia proporcionado o generar uno nuevo
     const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
-    // CORRECCIÓN: Formatear el monto siempre con dos decimales
-    const formattedAmount = paymentData.amount.toFixed(2)
+    // Formatear el monto según la documentación de PayU
+    const formattedAmount = Number.isInteger(paymentData.amount)
+      ? paymentData.amount.toString()
+      : paymentData.amount.toFixed(2)
 
     // Generar firma usando la API Key
-    const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`
-    const signature = crypto.createHash("md5").update(signatureString).digest("hex")
+    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
 
     // Formatear fecha de expiración (MM/YYYY a YYYY/MM)
     const [month, year] = paymentData.cardExpiry.split("/")
@@ -321,6 +327,15 @@ export async function processCardPayment(paymentData: {
     // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
     const taxBase = Math.round(paymentData.amount / 1.19)
     const taxValue = paymentData.amount - taxBase
+
+    // Generar deviceSessionId según la documentación de PayU
+    // En un entorno de servidor, podemos usar una combinación de timestamp y un valor aleatorio
+    const timestamp = Date.now().toString()
+    const randomValue = Math.random().toString(36).substring(2, 15)
+    const deviceSessionId = crypto
+      .createHash("md5")
+      .update(timestamp + randomValue)
+      .digest("hex")
 
     // Construir la solicitud para PayU
     const payuRequest: PayURequest = {
@@ -393,7 +408,7 @@ export async function processCardPayment(paymentData: {
         type: "AUTHORIZATION_AND_CAPTURE",
         paymentMethod,
         paymentCountry: "CO",
-        deviceSessionId: crypto.randomBytes(16).toString("hex"), // Generamos un ID de sesión aleatorio
+        deviceSessionId, // Usar el deviceSessionId generado según la documentación
         ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
         cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
         userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
@@ -408,12 +423,12 @@ export async function processCardPayment(paymentData: {
       merchantId: merchantId ? "Definido" : "No definido",
       isTestMode,
       referenceCode,
+      deviceSessionId,
     })
 
     // DEPURACIÓN: Imprimir la firma generada
     console.log("Firma generada:", signature)
     console.log("Monto formateado para firma:", formattedAmount)
-    console.log("String para firma:", signatureString)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {

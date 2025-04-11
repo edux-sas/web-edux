@@ -24,14 +24,20 @@ export async function GET(request: NextRequest) {
     const results = []
     for (const message of messages) {
       try {
-        // Intentar enviar correos
+        console.log(`Procesando mensaje ID ${message.id} de ${message.email}`)
+
+        // Intentar enviar correo al usuario
+        console.log(`Enviando confirmación a ${message.email}...`)
         const userEmailResult = await sendContactConfirmation(
           message.name,
           message.email,
           message.subject,
           message.message,
         )
+        console.log(`Resultado envío a usuario:`, userEmailResult)
 
+        // Intentar enviar correo al administrador
+        console.log(`Enviando notificación al administrador sobre mensaje de ${message.email}...`)
         const adminEmailResult = await sendAdminNotification(
           message.name,
           message.email,
@@ -39,6 +45,7 @@ export async function GET(request: NextRequest) {
           message.message,
           message.phone,
         )
+        console.log(`Resultado envío a administrador:`, adminEmailResult)
 
         // Marcar como procesado
         const emailSent = userEmailResult.success && adminEmailResult.success
@@ -48,6 +55,8 @@ export async function GET(request: NextRequest) {
           id: message.id,
           success: true,
           emailSent,
+          userEmailResult,
+          adminEmailResult,
         })
       } catch (processError) {
         console.error(`Error al procesar mensaje ${message.id}:`, processError)
@@ -55,6 +64,7 @@ export async function GET(request: NextRequest) {
           id: message.id,
           success: false,
           error: processError instanceof Error ? processError.message : "Error desconocido",
+          stack: processError instanceof Error ? processError.stack : undefined,
         })
       }
     }

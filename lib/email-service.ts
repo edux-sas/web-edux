@@ -1,28 +1,31 @@
-import { Recipient, EmailParams, MailerSend } from "mailersend"
+import nodemailer from "nodemailer"
 
-// Inicializar el cliente de MailerSend con la API key
-const mailerSend = new MailerSend({
-  apiKey: process.env.MAILERSEND_API_KEY || "",
+// Configuración del transporter de nodemailer
+const transporter = nodemailer.createTransport({
+  host: "edux.com.co",
+  port: 465,
+  secure: true, // true para puerto 465, false para otros puertos
+  auth: {
+    user: "soporte@edux.com.co",
+    pass: "127DRpYO<g(V",
+  },
 })
 
 // Dirección de correo desde la que se enviarán los emails
-const FROM_EMAIL = "no-reply@edux.com.co"
+const FROM_EMAIL = "soporte@edux.com.co"
 const FROM_NAME = "eduX Academy"
 
 // Dirección de correo para recibir copias de los formularios
-const ADMIN_EMAIL = "formacionedux@gmail.com"
+const ADMIN_EMAIL = "soporte@edux.com.co"
 
 // Función para enviar correo de confirmación al usuario
 export async function sendContactConfirmation(name: string, email: string, subject: string, message: string) {
   try {
-    const recipients = [new Recipient(email, name)]
-
-    const emailParams = new EmailParams()
-      .setFrom(FROM_EMAIL)
-      .setFromName(FROM_NAME)
-      .setTo(recipients)
-      .setSubject("Hemos recibido tu mensaje - eduX Academy")
-      .setHtml(`
+    const mailOptions = {
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: email,
+      subject: "Hemos recibido tu mensaje - eduX Academy",
+      html: `
         <!DOCTYPE html>
         <html lang="es">
         <head>
@@ -73,18 +76,19 @@ export async function sendContactConfirmation(name: string, email: string, subje
           </table>
         </body>
         </html>
-      `)
+      `,
+    }
 
-    const response = await mailerSend.email.send(emailParams)
-    console.log("Email de confirmación enviado:", response)
-    return { success: true }
+    const info = await transporter.sendMail(mailOptions)
+    console.log("Email de confirmación enviado:", info.messageId)
+    return { success: true, messageId: info.messageId }
   } catch (error) {
     console.error("Error al enviar correo de confirmación:", error)
     return { success: false, error }
   }
 }
 
-// Actualizar la función sendAdminNotification con una plantilla HTML más profesional
+// Función para enviar notificación al administrador
 export async function sendAdminNotification(
   name: string,
   email: string,
@@ -93,15 +97,12 @@ export async function sendAdminNotification(
   phone?: string,
 ) {
   try {
-    const recipients = [new Recipient(ADMIN_EMAIL, "Administrador eduX")]
-
-    const emailParams = new EmailParams()
-      .setFrom(FROM_EMAIL)
-      .setFromName(FROM_NAME)
-      .setTo(recipients)
-      .setReplyTo(email, name)
-      .setSubject(`Nuevo mensaje de contacto: ${subject}`)
-      .setHtml(`
+    const mailOptions = {
+      from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      to: ADMIN_EMAIL,
+      replyTo: email,
+      subject: `Nuevo mensaje de contacto: ${subject}`,
+      html: `
         <!DOCTYPE html>
         <html lang="es">
         <head>
@@ -153,11 +154,12 @@ export async function sendAdminNotification(
           </table>
         </body>
         </html>
-      `)
+      `,
+    }
 
-    const response = await mailerSend.email.send(emailParams)
-    console.log("Email de notificación enviado:", response)
-    return { success: true }
+    const info = await transporter.sendMail(mailOptions)
+    console.log("Email de notificación enviado:", info.messageId)
+    return { success: true, messageId: info.messageId }
   } catch (error) {
     console.error("Error al enviar notificación al administrador:", error)
     return { success: false, error }
@@ -217,6 +219,7 @@ export function getSubjectFromId(subjectId: string): string {
     soporte: "Soporte técnico",
     ventas: "Ventas corporativas",
     ceo: "Hablar con el CEO",
+    "demo-sie": "Solicitud de Demo SIE",
     otro: "Consulta general",
   }
 

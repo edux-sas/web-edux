@@ -154,6 +154,7 @@ export function PageContactForm() {
                   <SelectItem value="soporte">Soporte técnico</SelectItem>
                   <SelectItem value="ventas">Ventas corporativas</SelectItem>
                   <SelectItem value="ceo">Hablar con el CEO</SelectItem>
+                  <SelectItem value="demo-sie">Solicitud de Demo SIE</SelectItem>
                   <SelectItem value="otro">Otro</SelectItem>
                 </SelectContent>
               </Select>

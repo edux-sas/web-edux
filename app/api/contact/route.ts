@@ -1,5 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { sendContactConfirmation, sendAdminNotification, validateContactForm, getSubjectFromId } from "@/lib/mailersend"
+import {
+  sendContactConfirmation,
+  sendAdminNotification,
+  validateContactForm,
+  getSubjectFromId,
+} from "@/lib/email-service"
 import { rateLimit } from "@/lib/rate-limit"
 
 // Configurar limitador de tasa para prevenir spam
@@ -58,4 +63,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Error interno del servidor" }, { status: 500 })
   }
 }
-

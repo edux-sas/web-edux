@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { sendContactConfirmation, sendAdminNotification } from "@/lib/mailersend"
+import { sendContactConfirmation, sendAdminNotification } from "@/lib/email-service"
 
 export async function GET() {
   try {

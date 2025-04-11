@@ -142,7 +142,7 @@ export type PayUResponse = {
   }
 }
 
-// Función para generar la firma de PayU usando MD5
+// Modificar la función generatePayUSignature para formatear el monto con dos decimales siempre
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -150,20 +150,10 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
-  // CORRECCIÓN: Para COP (Peso Colombiano), el monto debe ser un entero sin decimales
-  // Para otras monedas, puede variar según la documentación de PayU
-  let formattedAmount: string
+  // CORRECCIÓN: Formatear el monto siempre con dos decimales, incluso para COP
+  const formattedAmount = amount.toFixed(2)
 
-  if (currency === "COP") {
-    // Para pesos colombianos, redondear al entero más cercano sin decimales
-    formattedAmount = Math.round(amount).toString()
-  } else {
-    // Para otras monedas, mantener el formato con 1 decimal por defecto
-    formattedAmount = amount.toFixed(1)
-  }
-
-  // Usar la API Key para la firma en producción
-  // En producción, la API Key se usa como llave para la firma
+  // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
   const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
@@ -189,17 +179,10 @@ export function generatePayUSignature(
   const signature = crypto.createHash("md5").update(signatureString).digest("hex")
   console.log("Firma generada (MD5):", signature)
 
-  // También generar firmas con otros algoritmos para comparar
-  const signatureSHA1 = crypto.createHash("sha1").update(signatureString).digest("hex")
-  console.log("Firma alternativa (SHA1):", signatureSHA1)
-
-  const signatureSHA256 = crypto.createHash("sha256").update(signatureString).digest("hex")
-  console.log("Firma alternativa (SHA256):", signatureSHA256)
-
   return signature
 }
 
-// Función para validar firmas de PayU
+// También actualizar la función validatePayUSignature para usar el mismo formato
 export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
   if (!notificationData || !notificationData.signature || !apiKey) {
@@ -220,28 +203,16 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       notificationData.currency &&
       notificationData.state_pol
     ) {
-      // CORRECCIÓN: Formatear el valor según la moneda
-      let formattedValue: string
-
-      if (notificationData.currency === "COP") {
-        formattedValue = Math.round(Number.parseFloat(notificationData.value)).toString()
-      } else {
-        formattedValue = Number.parseFloat(notificationData.value).toFixed(1)
-      }
+      // CORRECCIÓN: Formatear el valor siempre con dos decimales
+      const formattedValue = Number.parseFloat(notificationData.value).toFixed(2)
 
       // El formato estándar es: apiKey~merchantId~referenceCode~valor~moneda~estado
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
     }
     // Para notificaciones de confirmación de transacción
     else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
-      // CORRECCIÓN: Formatear el monto según la moneda
-      let formattedAmount: string
-
-      if (notificationData.currency === "COP") {
-        formattedAmount = Math.round(Number.parseFloat(notificationData.amount)).toString()
-      } else {
-        formattedAmount = Number.parseFloat(notificationData.amount).toFixed(1)
-      }
+      // CORRECCIÓN: Formatear el monto siempre con dos decimales
+      const formattedAmount = Number.parseFloat(notificationData.amount).toFixed(2)
 
       // Otro formato común
       signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
@@ -268,7 +239,7 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   }
 }
 
-// Función para procesar un pago con tarjeta de crédito
+// Actualizar también la función processCardPayment para usar el formato correcto
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -322,8 +293,8 @@ export async function processCardPayment(paymentData: {
     // Usar el código de referencia proporcionado o generar uno nuevo
     const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
 
-    // CORRECCIÓN: Para COP, el monto debe ser un entero sin decimales
-    const formattedAmount = Math.round(paymentData.amount).toString()
+    // CORRECCIÓN: Formatear el monto siempre con dos decimales
+    const formattedAmount = paymentData.amount.toFixed(2)
 
     // Generar firma usando la API Key
     const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`

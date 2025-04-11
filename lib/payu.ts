@@ -142,7 +142,9 @@ export type PayUResponse = {
   }
 }
 
-// Función para generar la firma de PayU usando MD5
+// Modificar la función generatePayUSignature para usar la llave pública en lugar de la API Key
+// Según la documentación de PayU para Colombia: https://developers.payulatam.com/latam/en/docs/integrations/webcheckout-integration.html
+
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -162,22 +164,26 @@ export function generatePayUSignature(
     formattedAmount = amount.toFixed(1)
   }
 
-  // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
+  // CORRECCIÓN: Usar la llave pública en lugar de la API Key para la firma
+  // La llave pública es: PKl789Ib77233C748T0oTr804x
+  const publicKey = "PKl789Ib77233C748T0oTr804x"
+
+  // Crear el string para la firma: publicKey~merchantId~referenceCode~amount~currency
+  const signatureString = `${publicKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
 
   // Información detallada para depuración
   console.log("Análisis de componentes de la firma:")
   console.log(
-    "- apiKey:",
-    apiKey,
+    "- publicKey:",
+    publicKey,
     "- Longitud:",
-    apiKey.length,
+    publicKey.length,
     "- Último carácter:",
-    apiKey.slice(-1),
+    publicKey.slice(-1),
     "- Código ASCII:",
-    apiKey.slice(-1).charCodeAt(0),
+    publicKey.slice(-1).charCodeAt(0),
   )
   console.log("- merchantId:", merchantId)
   console.log("- referenceCode:", referenceCode)
@@ -198,7 +204,8 @@ export function generatePayUSignature(
   return signature
 }
 
-// Función para validar firmas de PayU
+// También necesitamos actualizar la función validatePayUSignature para usar la llave pública
+
 export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
   if (!notificationData || !notificationData.signature || !apiKey) {
@@ -209,6 +216,9 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   const receivedSignature = notificationData.signature
 
   try {
+    // Usar la llave pública en lugar de la API Key
+    const publicKey = "PKl789Ib77233C748T0oTr804x"
+
     // Diferentes formatos de firma según el tipo de notificación
     let signatureString = ""
 
@@ -228,8 +238,8 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
         formattedValue = Number.parseFloat(notificationData.value).toFixed(1)
       }
 
-      // El formato estándar es: ApiKey~merchantId~referenceCode~valor~moneda~estado
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
+      // El formato estándar es: publicKey~merchantId~referenceCode~valor~moneda~estado
+      signatureString = `${publicKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
     }
     // Para notificaciones de confirmación de transacción
     else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
@@ -243,7 +253,7 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
       }
 
       // Otro formato común
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
+      signatureString = `${publicKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
     }
     // Si no reconocemos el formato, fallamos por seguridad
     else {
@@ -267,7 +277,8 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   }
 }
 
-// Función para procesar un pago con tarjeta de crédito
+// Actualizar la función processCardPayment para usar la llave pública en la firma
+
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -293,6 +304,8 @@ export async function processCardPayment(paymentData: {
     const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
     const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
     const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+    // Llave pública para la firma
+    const publicKey = "PKl789Ib77233C748T0oTr804x"
 
     // Verificar que las credenciales estén definidas
     if (!apiKey || !apiLogin || !merchantId) {
@@ -324,8 +337,10 @@ export async function processCardPayment(paymentData: {
     // CORRECCIÓN: Para COP, el monto debe ser un entero sin decimales
     const formattedAmount = Math.round(paymentData.amount).toString()
 
-    // Generar firma
-    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
+    // Generar firma usando la llave pública
+    // Crear el string para la firma: publicKey~merchantId~referenceCode~amount~currency
+    const signatureString = `${publicKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`
+    const signature = crypto.createHash("md5").update(signatureString).digest("hex")
 
     // Formatear fecha de expiración (MM/YYYY a YYYY/MM)
     const [month, year] = paymentData.cardExpiry.split("/")
@@ -440,7 +455,7 @@ export async function processCardPayment(paymentData: {
     // DEPURACIÓN: Imprimir la firma generada
     console.log("Firma generada:", signature)
     console.log("Monto formateado para firma:", formattedAmount)
-    console.log("String para firma:", `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~COP`)
+    console.log("String para firma:", signatureString)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {

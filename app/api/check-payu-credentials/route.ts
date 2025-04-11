@@ -32,9 +32,9 @@ export async function GET() {
     }
 
     // Verificar si las credenciales coinciden con las esperadas
-    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2l"
-    const expectedApiLogin = "oO7dlsaFObz7118"
-    const expectedMerchantId = "1022766"
+    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I"
+    const expectedApiLogin = "oO7dIsaFObz7118"
+    const expectedMerchantId = "1031879"
 
     const credentialsMatch = {
       apiKey: payuCredentials.apiKey === expectedApiKey,

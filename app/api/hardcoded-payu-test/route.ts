@@ -5,7 +5,7 @@ export async function GET() {
     // Credenciales hardcodeadas para pruebas
     const apiKey = "DQr8RmU97c4o41uLR8kpdsYF2I"
     const apiLogin = "oO7dIsaFObz7118"
-    const merchantId = "1022766"
+    const merchantId = "1031879"
     const isTestMode = true
 
     // URL de la API de PayU (sandbox o producción)

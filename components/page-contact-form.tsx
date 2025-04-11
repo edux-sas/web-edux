@@ -16,7 +16,6 @@ export function PageContactForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formSubmitted, setFormSubmitted] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [formWarning, setFormWarning] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -46,6 +45,10 @@ export function PageContactForm() {
       // Verificar si el campo honeypot está lleno (indicaría un bot)
       const honeypotValue = honeypotRef.current?.value
 
+      // Establecer un tiempo límite para la solicitud
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos de tiempo límite
+
       // Enviar datos al endpoint
       const response = await fetch("/api/contact", {
         method: "POST",
@@ -56,14 +59,32 @@ export function PageContactForm() {
           ...formData,
           honeypot: honeypotValue,
         }),
+        signal: controller.signal,
+      }).catch((error) => {
+        if (error.name === "AbortError") {
+          throw new Error("La solicitud ha tardado demasiado tiempo. Por favor, inténtalo de nuevo más tarde.")
+        }
+        throw error
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
-      }
+      clearTimeout(timeoutId)
 
-      await response.json()
+      // Manejar errores HTTP
+      if (!response.ok) {
+        let errorMessage = `Error ${response.status}: ${response.statusText}`
+
+        try {
+          const errorData = await response.json()
+          if (errorData && errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (jsonError) {
+          console.error("Error al parsear respuesta JSON:", jsonError)
+          // Si no podemos parsear JSON, usamos el mensaje de error HTTP
+        }
+
+        throw new Error(errorMessage)
+      }
 
       // Formulario enviado con éxito
       setFormSubmitted(true)
@@ -91,10 +112,7 @@ export function PageContactForm() {
           <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
             <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertTitle>¡Mensaje enviado!</AlertTitle>
-            <AlertDescription>
-              Hemos recibido tu mensaje. Te hemos enviado una confirmación por correo electrónico y nos pondremos en
-              contacto contigo pronto.
-            </AlertDescription>
+            <AlertDescription>Hemos recibido tu mensaje. Nos pondremos en contacto contigo pronto.</AlertDescription>
           </Alert>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { CheckCircle, AlertCircle, Loader2, Info } from "lucide-react"
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 
 interface ContactFormProps {
   onSuccess?: () => void
@@ -21,7 +21,6 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formSubmitted, setFormSubmitted] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
-  const [formWarning, setFormWarning] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -46,7 +45,6 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
     e.preventDefault()
     setIsSubmitting(true)
     setFormError(null)
-    setFormWarning(null)
 
     try {
       // Verificar si el campo honeypot está lleno (indicaría un bot)
@@ -54,7 +52,7 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
 
       // Establecer un tiempo límite para la solicitud
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 20000) // 20 segundos de tiempo límite
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos de tiempo límite
 
       // Enviar datos al endpoint
       const response = await fetch("/api/contact", {
@@ -93,13 +91,6 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
         throw new Error(errorMessage)
       }
 
-      const data = await response.json()
-
-      // Verificar si hay advertencias
-      if (data.warning) {
-        setFormWarning(data.warning)
-      }
-
       // Formulario enviado con éxito
       setFormSubmitted(true)
 
@@ -132,12 +123,7 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
         <Alert className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertTitle>¡Mensaje enviado!</AlertTitle>
-          <AlertDescription>
-            Hemos recibido tu mensaje.{" "}
-            {formWarning
-              ? formWarning
-              : "Te hemos enviado una confirmación por correo electrónico y nos pondremos en contacto contigo pronto."}
-          </AlertDescription>
+          <AlertDescription>Hemos recibido tu mensaje. Nos pondremos en contacto contigo pronto.</AlertDescription>
         </Alert>
       ) : formError ? (
         <Alert variant="destructive">
@@ -147,16 +133,6 @@ export function ContactForm({ onSuccess, defaultSubject, buttonText = "Enviar me
         </Alert>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
-          {formWarning && (
-            <Alert
-              variant="default"
-              className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900"
-            >
-              <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <AlertDescription>{formWarning}</AlertDescription>
-            </Alert>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="name">Nombre completo</Label>
             <Input

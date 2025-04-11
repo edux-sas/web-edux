@@ -1,10 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import {
-  sendContactConfirmation,
-  sendAdminNotification,
-  validateContactForm,
-  getSubjectFromId,
-} from "@/lib/email-service"
+import { validateContactForm, getSubjectFromId } from "@/lib/email-service"
+import { saveContactMessage } from "@/lib/contact-service"
 import { rateLimit } from "@/lib/rate-limit"
 
 // Configurar limitador de tasa para prevenir spam
@@ -44,59 +40,31 @@ export async function POST(request: NextRequest) {
     // Registrar la solicitud para depuración
     console.log(`Procesando solicitud de contacto de ${name} (${email}), asunto: ${subject}`)
 
-    // Establecer un tiempo límite para el envío de correos
-    const emailTimeout = 10000 // 10 segundos
+    // Guardar el mensaje en Supabase
+    const saveResult = await saveContactMessage({
+      name,
+      email,
+      phone,
+      subject,
+      message,
+    })
 
-    // Enviar correo de confirmación al usuario con tiempo límite
-    const userEmailPromise = Promise.race([
-      sendContactConfirmation(name, email, subject, message),
-      new Promise<{ success: false; error: string }>((resolve) =>
-        setTimeout(() => resolve({ success: false, error: "Tiempo de espera agotado" }), emailTimeout),
-      ),
-    ])
-
-    const userEmailResult = await userEmailPromise
-
-    if (!userEmailResult.success) {
-      console.error("Error al enviar correo al usuario:", userEmailResult.error)
-      // Continuamos con el proceso aunque falle el correo al usuario
-    }
-
-    // Enviar notificación al administrador con tiempo límite
-    const adminEmailPromise = Promise.race([
-      sendAdminNotification(name, email, subject, message, phone),
-      new Promise<{ success: false; error: string }>((resolve) =>
-        setTimeout(() => resolve({ success: false, error: "Tiempo de espera agotado" }), emailTimeout),
-      ),
-    ])
-
-    const adminEmailResult = await adminEmailPromise
-
-    if (!adminEmailResult.success) {
-      console.error("Error al enviar correo al administrador:", adminEmailResult.error)
-
-      // Guardar los datos del formulario en un archivo de registro o base de datos como respaldo
-      console.log(
-        "DATOS DE CONTACTO (RESPALDO):",
-        JSON.stringify({
-          timestamp: new Date().toISOString(),
-          name,
-          email,
-          phone,
-          subject,
-          message,
-        }),
+    if (!saveResult.success) {
+      console.error("Error al guardar mensaje en Supabase:", saveResult.error)
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Error al procesar tu mensaje. Por favor, inténtalo de nuevo más tarde.",
+        },
+        { status: 500 },
       )
-
-      // Devolver un mensaje de éxito parcial
-      return NextResponse.json({
-        success: true,
-        warning:
-          "Tu mensaje ha sido recibido, pero es posible que haya un retraso en nuestra respuesta debido a problemas técnicos.",
-      })
     }
 
-    return NextResponse.json({ success: true })
+    // Devolver respuesta exitosa
+    return NextResponse.json({
+      success: true,
+      message: "Tu mensaje ha sido recibido. Nos pondremos en contacto contigo pronto.",
+    })
   } catch (error) {
     console.error("Error en el procesamiento del formulario de contacto:", error)
 

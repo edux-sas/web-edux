@@ -167,8 +167,35 @@ export function generatePayUSignature(
 
   console.log("String para firma PayU:", signatureString)
 
+  // Información detallada para depuración
+  console.log("Análisis de componentes de la firma:")
+  console.log(
+    "- apiKey:",
+    apiKey,
+    "- Longitud:",
+    apiKey.length,
+    "- Último carácter:",
+    apiKey.slice(-1),
+    "- Código ASCII:",
+    apiKey.slice(-1).charCodeAt(0),
+  )
+  console.log("- merchantId:", merchantId)
+  console.log("- referenceCode:", referenceCode)
+  console.log("- formattedAmount:", formattedAmount)
+  console.log("- currency:", currency)
+
   // Generar el hash MD5
-  return crypto.createHash("md5").update(signatureString).digest("hex")
+  const signature = crypto.createHash("md5").update(signatureString).digest("hex")
+  console.log("Firma generada (MD5):", signature)
+
+  // También generar firmas con otros algoritmos para comparar
+  const signatureSHA1 = crypto.createHash("sha1").update(signatureString).digest("hex")
+  console.log("Firma alternativa (SHA1):", signatureSHA1)
+
+  const signatureSHA256 = crypto.createHash("sha256").update(signatureString).digest("hex")
+  console.log("Firma alternativa (SHA256):", signatureSHA256)
+
+  return signature
 }
 
 // Función para validar firmas de PayU

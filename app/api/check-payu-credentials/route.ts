@@ -31,10 +31,20 @@ export async function GET() {
       publicTestMode: payuCredentials.publicTestMode ? "Activado" : "Desactivado",
     }
 
+    // Análisis detallado de la API Key para detectar problemas de caracteres
+    const apiKeyAnalysis = {
+      value: payuCredentials.publicApiKey,
+      length: payuCredentials.publicApiKey.length,
+      lastChar: payuCredentials.publicApiKey.slice(-1),
+      lastCharCode: payuCredentials.publicApiKey.slice(-1).charCodeAt(0),
+      charCodes: Array.from(payuCredentials.publicApiKey).map((char) => char.charCodeAt(0)),
+      base64: Buffer.from(payuCredentials.publicApiKey).toString("base64"),
+    }
+
     // Verificar si las credenciales coinciden con las esperadas
-    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I"
-    const expectedApiLogin = "oO7dIsaFObz7118"
-    const expectedMerchantId = "1031879"
+    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I" // Actualizado con la API Key correcta
+    const expectedApiLogin = "oO7dlsaFObz7118"
+    const expectedMerchantId = "1022766"
 
     const credentialsMatch = {
       apiKey: payuCredentials.apiKey === expectedApiKey,
@@ -51,6 +61,7 @@ export async function GET() {
       status: "success",
       message: "Verificación de credenciales de PayU",
       credentialsStatus,
+      apiKeyAnalysis,
       credentialsMatch,
       apiUrl: payuCredentials.testMode
         ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"

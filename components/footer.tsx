@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, Globe, ChevronRight, Heart } from "lucide-react"
+import { Facebook, Instagram, Linkedin, Mail, Phone, Globe, ChevronRight, Heart } from "lucide-react"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -25,32 +25,31 @@ export default function Footer() {
           </p>
           <div className="flex space-x-5 mt-8">
             <Link
-              href="#"
+              href="https://www.linkedin.com/in/edux-futuro?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"
               className="text-muted-foreground hover:text-primary transition-colors duration-200 transform hover:scale-110"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <Facebook className="h-6 w-6" />
-              <span className="sr-only">Facebook</span>
+              <Linkedin className="h-6 w-6" />
+              <span className="sr-only">LinkedIn</span>
             </Link>
             <Link
-              href="#"
+              href="https://www.instagram.com/eduxfuturo?igsh=Z3lodzF2c2htbG1s"
               className="text-muted-foreground hover:text-primary transition-colors duration-200 transform hover:scale-110"
-            >
-              <Twitter className="h-6 w-6" />
-              <span className="sr-only">Twitter</span>
-            </Link>
-            <Link
-              href="#"
-              className="text-muted-foreground hover:text-primary transition-colors duration-200 transform hover:scale-110"
+              target="_blank"
+              rel="noopener noreferrer"
             >
               <Instagram className="h-6 w-6" />
               <span className="sr-only">Instagram</span>
             </Link>
             <Link
-              href="#"
+              href="https://www.facebook.com/share/16vcaBcPve/?mibextid=wwXIfr"
               className="text-muted-foreground hover:text-primary transition-colors duration-200 transform hover:scale-110"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              <Linkedin className="h-6 w-6" />
-              <span className="sr-only">LinkedIn</span>
+              <Facebook className="h-6 w-6" />
+              <span className="sr-only">Facebook</span>
             </Link>
           </div>
         </div>
@@ -170,7 +169,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center">
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho con{" "}
+            © {currentYear} eduX. Todos los derechos reservados. Hecho con{" "}
             <a
               href="https://www.v1tr0.com/"
               target="_blank"

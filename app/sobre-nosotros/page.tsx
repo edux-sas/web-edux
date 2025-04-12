@@ -222,6 +222,9 @@ export default function AboutUsPage() {
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Conoce a los profesionales que hacen posible la transformación educativa en eduX.
               </p>
+              <p className="max-w-[900px] text-sm text-muted-foreground italic">
+                *Así ve nuestra IA a los colaboradores de eduX. ¡Si te quieres sumar al equipo, bienvenido!
+              </p>
             </div>
           </div>
 

@@ -142,7 +142,8 @@ export type PayUResponse = {
   }
 }
 
-// Función corregida para generar la firma PayU
+// Modifiquemos la función generatePayUSignature para asegurar que no haya problemas con el referenceCode
+
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -150,6 +151,9 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
+  // Asegurar que el referenceCode no tenga espacios al inicio o final
+  const cleanReferenceCode = referenceCode.trim()
+
   // IMPORTANTE: Para COP, PayU espera valores enteros sin decimales
   // Para otras monedas, puede requerir 2 decimales
   let formattedAmount: string
@@ -163,7 +167,7 @@ export function generatePayUSignature(
   }
 
   // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${referenceCode}~${formattedAmount}~${currency}`
+  const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
 
@@ -180,7 +184,7 @@ export function generatePayUSignature(
     apiKey.slice(-1).charCodeAt(0),
   )
   console.log("- merchantId:", merchantId)
-  console.log("- referenceCode:", referenceCode)
+  console.log("- referenceCode:", cleanReferenceCode, "- Original:", referenceCode)
   console.log("- formattedAmount:", formattedAmount)
   console.log("- currency:", currency)
 
@@ -258,6 +262,24 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   }
 }
 
+// Añadir esta función de depuración justo antes de la función processCardPayment
+
+// Función para depurar la consistencia del referenceCode
+function debugReferenceCode(referenceCode: string, payuRequest: any) {
+  console.log("=== DEPURACIÓN DE REFERENCE CODE ===")
+  console.log("referenceCode usado para firma:", referenceCode)
+  console.log("referenceCode en el JSON:", payuRequest.transaction.order.referenceCode)
+  console.log("¿Son idénticos?", referenceCode === payuRequest.transaction.order.referenceCode)
+
+  // Verificar si hay espacios o caracteres especiales
+  console.log("Longitud del referenceCode:", referenceCode.length)
+  console.log(
+    "Caracteres del referenceCode:",
+    Array.from(referenceCode).map((c) => `'${c}' (${c.charCodeAt(0)})`),
+  )
+  console.log("==============================")
+}
+
 // Función actualizada para procesar pagos con tarjeta
 export async function processCardPayment(paymentData: {
   cardNumber: string
@@ -276,6 +298,7 @@ export async function processCardPayment(paymentData: {
     state: string
     country: string
     postalCode: string
+    phone: string
   }
 }): Promise<PayUResponse> {
   try {
@@ -310,7 +333,9 @@ export async function processCardPayment(paymentData: {
       : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
     // Usar el código de referencia proporcionado o generar uno nuevo
-    const referenceCode = paymentData.referenceCode || `EDUX_${Date.now()}`
+    // Asegurarnos de que no tenga espacios ni caracteres problemáticos
+    let referenceCode = paymentData.referenceCode || `EDUX${Date.now()}${Math.floor(Math.random() * 1000)}`
+    referenceCode = referenceCode.trim().replace(/[^a-zA-Z0-9]/g, "")
 
     // Generar firma usando la API Key
     const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
@@ -437,6 +462,7 @@ export async function processCardPayment(paymentData: {
     // DEPURACIÓN: Imprimir la firma generada
     console.log("Firma generada:", signature)
     console.log("Monto para transacción:", paymentData.amount)
+    debugReferenceCode(referenceCode, payuRequest)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {

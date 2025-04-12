@@ -67,14 +67,7 @@ export default function AboutUsPage() {
       title: "Infraestructura física e inteligencia artificial educativa",
       description:
         "Nos proyectamos como líderes en innovación educativa, integrando infraestructura tecnológica física, adecuaciones de laboratorios, licencias certificadas y capacidades de escalamiento institucional. Adicionalmente, lanzamos Aurora, nuestra inteligencia artificial educativa para desarrollos a la medida, que potencia la personalización de contenidos, el análisis de desempeño y la automatización de procesos formativos.",
-    },
-  ]
-
-  const stats = [
-    { value: "50,000+", label: "Estudiantes" },
-    { value: "100+", label: "Cursos" },
-    { value: "25,000+", label: "Tests DISC realizados" },
-    { value: "8", label: "Países" },
+    }, 
   ]
 
   return (
@@ -82,7 +75,7 @@ export default function AboutUsPage() {
       {/* Hero Section */}
       <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
         <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_450px]">
+          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_550px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Sobre eduX </h1>
@@ -91,10 +84,7 @@ export default function AboutUsPage() {
                   alta calidad y herramientas de evaluación como el Test DISC.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                <Button asChild size="lg">
-                  <Link href="/cursos">Explorar Cursos</Link>
-                </Button>
+              <div className="flex flex-col gap-2 min-[400px]:flex-row">                
                 <Button asChild variant="outline" size="lg">
                   <Link href="/contacto">Contactar</Link>
                 </Button>
@@ -103,7 +93,7 @@ export default function AboutUsPage() {
             <div className="flex items-center justify-center">
               <div className="relative aspect-video overflow-hidden rounded-xl shadow-lg">
                 <Image
-                  src="/images/edux-building-hologram.png"
+                  src="/images/edux-academia-virtual.png"
                   alt="eduX Academia Virtual"
                   width={800}
                   height={450}
@@ -192,7 +182,7 @@ export default function AboutUsPage() {
           <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 mt-12">
             <div className="relative overflow-hidden rounded-lg shadow-lg">
               <Image
-                src="/images/hologram-education.png"
+                src="/images/metodologia-innovadora.png"
                 alt="Metodología Innovadora"
                 width={600}
                 height={400}
@@ -381,10 +371,7 @@ export default function AboutUsPage() {
                 Comienza tu viaje de aprendizaje y desarrollo profesional con eduX Academy.
               </p>
             </div>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row">
-              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-white/90">
-                <Link href="/registro">Crear Cuenta Gratis</Link>
-              </Button>
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">              
               <Button
                 asChild
                 variant="outline"

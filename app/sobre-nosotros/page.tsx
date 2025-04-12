@@ -33,33 +33,40 @@ export default function AboutUsPage() {
 
   const milestones = [
     {
-      year: "2015",
-      title: "Fundación de eduX",
-      description: "María Rodríguez funda eduX con la visión de transformar la educación profesional en Latinoamérica.",
-    },
-    {
       year: "2017",
-      title: "Lanzamiento de la plataforma online",
+      title: "Fundación de eduX Futuro",
       description:
-        "Expandimos nuestros servicios con una plataforma digital que permite acceso a nuestros cursos desde cualquier lugar.",
+        "Jaime Diego Gutiérrez funda eduX Futuro con el propósito de transformar la educación virtual, apostando por la calidad, la innovación pedagógica y el acceso inclusivo al conocimiento.",
     },
     {
-      year: "2019",
-      title: "Integración del test DISC",
+      year: "2018",
+      title: "Diseño de cursos a la medida",
       description:
-        "Incorporamos la metodología DISC para ofrecer evaluaciones de comportamiento y personalidad de alta precisión.",
+        "Lanzamos nuestra primera oferta virtual de cursos y diplomados certificados por instituciones de educación superior, adaptados a las necesidades reales del entorno profesional y laboral.",
     },
     {
-      year: "2021",
-      title: "Expansión internacional",
+      year: "2019 - 2020",
+      title: "Creación del test DISC eduX",
       description:
-        "Comenzamos operaciones en varios países de Latinoamérica, llevando nuestra metodología a miles de nuevos estudiantes.",
+        "Desarrollamos nuestro propio test DISC, una herramienta de autoconocimiento que permite identificar los perfiles Dominante, Influyente, Estable y Cumplidor, guiando a los usuarios en procesos de reskilling y upskilling. Esta metodología se integra con cursos virtuales certificados a través de la institución de educación superior Utedé (Unidad Técnica para el Desarrollo Profesional), con insignias digitales y certificados académicos respaldados.",
     },
     {
       year: "2023",
-      title: "Renovación tecnológica",
+      title: "Metasistemas educativos institucionales",
       description:
-        "Lanzamos nuestra plataforma completamente renovada con informes DISC en tiempo real y experiencia de usuario mejorada.",
+        "Iniciamos la implementación de metasistemas en instituciones educativas, permitiéndoles construir ofertas de educación virtual con altos estándares de calidad, acompañadas de infraestructura tecnológica robusta.",
+    },
+    {
+      year: "2024",
+      title: "Lanzamiento del SIE (Sistema Integral Educativo)",
+      description:
+        "Desplegamos nuestra plataforma SIE, una solución completa de administración educativa que permite gestionar rutas formativas, matrícula, horarios, calificaciones y reportes académicos. El sistema está integrado con los requerimientos del SNIES, e incluye rutas de seguimiento financiero, académico y administrativo, adaptadas a cada institución.",
+    },
+    {
+      year: "2025",
+      title: "Infraestructura física e inteligencia artificial educativa",
+      description:
+        "Nos proyectamos como líderes en innovación educativa, integrando infraestructura tecnológica física, adecuaciones de laboratorios, licencias certificadas y capacidades de escalamiento institucional. Adicionalmente, lanzamos Aurora, nuestra inteligencia artificial educativa para desarrollos a la medida, que potencia la personalización de contenidos, el análisis de desempeño y la automatización de procesos formativos.",
     },
   ]
 
@@ -75,7 +82,7 @@ export default function AboutUsPage() {
       {/* Hero Section */}
       <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
         <div className="container px-4 md:px-6">
-          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_550px]">
+          <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_450px]">
             <div className="flex flex-col justify-center space-y-4">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Sobre eduX </h1>
@@ -84,7 +91,10 @@ export default function AboutUsPage() {
                   alta calidad y herramientas de evaluación como el Test DISC.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">                
+              <div className="flex flex-col gap-2 min-[400px]:flex-row">
+                <Button asChild size="lg">
+                  <Link href="/cursos">Explorar Cursos</Link>
+                </Button>
                 <Button asChild variant="outline" size="lg">
                   <Link href="/contacto">Contactar</Link>
                 </Button>
@@ -93,7 +103,7 @@ export default function AboutUsPage() {
             <div className="flex items-center justify-center">
               <div className="relative aspect-video overflow-hidden rounded-xl shadow-lg">
                 <Image
-                  src="/images/edux-academia-virtual.png"
+                  src="/images/edux-building-hologram.png"
                   alt="eduX Academia Virtual"
                   width={800}
                   height={450}
@@ -182,7 +192,7 @@ export default function AboutUsPage() {
           <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 mt-12">
             <div className="relative overflow-hidden rounded-lg shadow-lg">
               <Image
-                src="/images/metodologia-innovadora.png"
+                src="/images/hologram-education.png"
                 alt="Metodología Innovadora"
                 width={600}
                 height={400}
@@ -371,7 +381,10 @@ export default function AboutUsPage() {
                 Comienza tu viaje de aprendizaje y desarrollo profesional con eduX Academy.
               </p>
             </div>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row">              
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">
+              <Button asChild size="lg" className="bg-white text-blue-600 hover:bg-white/90">
+                <Link href="/registro">Crear Cuenta Gratis</Link>
+              </Button>
               <Button
                 asChild
                 variant="outline"

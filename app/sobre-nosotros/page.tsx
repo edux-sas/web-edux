@@ -88,26 +88,29 @@ export default function AboutUsPage() {
     {
       name: "Jaime Diego Gutiérrez",
       position: "CEO & Fundador",
-      image: "/images/equipo-edux-3.png",
+      image: "/images/equipo-edux-2.png",
       description:
         "Visionario educativo con más de 15 años de experiencia en transformación digital y pedagogía innovadora.",
-      icon: <Briefcase className="h-5 w-5 text-primary" />,
+      // Ícono actualizado para un perfil ejecutivo
+      icon: <Briefcase className="h-6 w-6 text-primary" />,
     },
     {
-      name: "Carlos Martínez",
+      name: "Diego Varela",
+      position: "Director Tecnológico y Product Owner",
+      image: "/images/equipo-edux-3.png",
+      description:
+        "Experto en desarrollo de software, metodología SCRUM y gestión de proyectos tecnológicos.",
+      icon: <Code className="h-6 w-6 text-primary" />,
+    },
+    {
+      name: "José Alexis Correa",
       position: "Director de Tecnología",
-      image: "/images/equipo-edux-2.png",
-      description: "Experto en desarrollo de plataformas educativas y sistemas de gestión del aprendizaje.",
-      icon: <Code className="h-5 w-5 text-primary" />,
-    },
-    {
-      name: "Roberto Sánchez",
-      position: "Director Académico",
       image: "/images/equipo-edux-1.png",
-      description: "Especialista en diseño curricular y metodologías de evaluación basadas en competencias.",
-      icon: <GraduationCap className="h-5 w-5 text-primary" />,
+      description:
+        "Prompt Engineer, Arquitecto de Sistemas. Especialista en desarrollo FullStack.",
+      icon: <Code className="h-6 w-6 text-primary" />,
     },
-  ]
+  ];
 
   const stats = [
     { value: "50,000+", label: "Estudiantes" },

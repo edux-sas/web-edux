@@ -3,7 +3,21 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Target, Clock, CheckCircle, Lightbulb, Heart, TrendingUp, Award, Trophy, Users, Star } from "lucide-react"
+import {
+  Target,
+  Clock,
+  CheckCircle,
+  Lightbulb,
+  Heart,
+  TrendingUp,
+  Award,
+  Trophy,
+  Users,
+  Star,
+  Briefcase,
+  GraduationCap,
+  Code,
+} from "lucide-react"
 
 export default function AboutUsPage() {
   const values = [
@@ -67,7 +81,39 @@ export default function AboutUsPage() {
       title: "Infraestructura física e inteligencia artificial educativa",
       description:
         "Nos proyectamos como líderes en innovación educativa, integrando infraestructura tecnológica física, adecuaciones de laboratorios, licencias certificadas y capacidades de escalamiento institucional. Adicionalmente, lanzamos Aurora, nuestra inteligencia artificial educativa para desarrollos a la medida, que potencia la personalización de contenidos, el análisis de desempeño y la automatización de procesos formativos.",
-    }, 
+    },
+  ]
+
+  const teamMembers = [
+    {
+      name: "Jaime Diego Gutiérrez",
+      position: "CEO & Fundador",
+      image: "/images/equipo-edux-3.png",
+      description:
+        "Visionario educativo con más de 15 años de experiencia en transformación digital y pedagogía innovadora.",
+      icon: <Briefcase className="h-5 w-5 text-primary" />,
+    },
+    {
+      name: "Carlos Martínez",
+      position: "Director de Tecnología",
+      image: "/images/equipo-edux-2.png",
+      description: "Experto en desarrollo de plataformas educativas y sistemas de gestión del aprendizaje.",
+      icon: <Code className="h-5 w-5 text-primary" />,
+    },
+    {
+      name: "Roberto Sánchez",
+      position: "Director Académico",
+      image: "/images/equipo-edux-1.png",
+      description: "Especialista en diseño curricular y metodologías de evaluación basadas en competencias.",
+      icon: <GraduationCap className="h-5 w-5 text-primary" />,
+    },
+  ]
+
+  const stats = [
+    { value: "50,000+", label: "Estudiantes" },
+    { value: "100+", label: "Cursos" },
+    { value: "25,000+", label: "Tests DISC realizados" },
+    { value: "8", label: "Países" },
   ]
 
   return (
@@ -84,7 +130,7 @@ export default function AboutUsPage() {
                   alta calidad y herramientas de evaluación como el Test DISC.
                 </p>
               </div>
-              <div className="flex flex-col gap-2 min-[400px]:flex-row">                
+              <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Button asChild variant="outline" size="lg">
                   <Link href="/contacto">Contactar</Link>
                 </Button>
@@ -167,8 +213,44 @@ export default function AboutUsPage() {
         </div>
       </section>
 
-      {/* Nuestro Enfoque */}
+      {/* Nuestro Equipo - Nueva sección */}
       <section className="w-full py-12 md:py-24 lg:py-32">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center justify-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestro Equipo</h2>
+              <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+                Conoce a los profesionales que hacen posible la transformación educativa en eduX.
+              </p>
+            </div>
+          </div>
+
+          <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+            {teamMembers.map((member, index) => (
+              <div key={index} className="flex flex-col items-center text-center">
+                <div className="relative w-64 h-64 mb-6 rounded-xl overflow-hidden shadow-lg transition-transform duration-300 hover:scale-105">
+                  <Image
+                    src={member.image || "/placeholder.svg"}
+                    alt={member.name}
+                    width={256}
+                    height={256}
+                    className="object-cover"
+                  />
+                </div>
+                <h3 className="text-xl font-bold">{member.name}</h3>
+                <div className="flex items-center gap-2 text-primary mb-2">
+                  {member.icon}
+                  <p className="font-medium">{member.position}</p>
+                </div>
+                <p className="text-muted-foreground max-w-xs">{member.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Nuestro Enfoque */}
+      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
@@ -221,7 +303,7 @@ export default function AboutUsPage() {
       </section>
 
       {/* History & Stats */}
-      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
+      <section className="w-full py-12 md:py-24 lg:py-32">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center mb-12">
             <div className="space-y-2">
@@ -277,7 +359,7 @@ export default function AboutUsPage() {
       </section>
 
       {/* Reconocimientos */}
-      <section className="w-full py-12 md:py-24 lg:py-32">
+      <section className="w-full py-12 md:py-24 lg:py-32 bg-muted/50">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <div className="space-y-2">
@@ -371,7 +453,7 @@ export default function AboutUsPage() {
                 Comienza tu viaje de aprendizaje y desarrollo profesional con eduX Academy.
               </p>
             </div>
-            <div className="flex flex-col gap-2 min-[400px]:flex-row">              
+            <div className="flex flex-col gap-2 min-[400px]:flex-row">
               <Button
                 asChild
                 variant="outline"

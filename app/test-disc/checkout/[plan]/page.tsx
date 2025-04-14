@@ -10,23 +10,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertCircle, Loader2, Check, X, ShieldCheck } from "lucide-react"
+import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
-import { PayUPaymentForm } from "@/components/payu-payment-form"
-import { PayUCardForm } from "@/components/payu-card-form"
+import { processCardPayment } from "@/lib/payu"
+import { register } from "@/lib/auth"
 
 export default function CheckoutPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const [paymentMethod, setPaymentMethod] = useState("redirect")
+  const [paymentMethod, setPaymentMethod] = useState("card")
   const [loading, setLoading] = useState(false)
   const [supabaseStatus, setSupabaseStatus] = useState<{
     connected: boolean
     error?: string
+    supabaseUrl?: string
+    supabaseAnonKey?: string
   } | null>(null)
   const [isCheckingConnection, setIsCheckingConnection] = useState(true)
   const [formData, setFormData] = useState({
@@ -35,13 +36,13 @@ export default function CheckoutPage() {
     password: "",
     confirmPassword: "",
     terms: false,
-    phone: "",
-    document: "",
-    address: "",
-    city: "Bogotá",
-    state: "Bogotá D.C.",
-    country: "CO",
-    postalCode: "000000",
+    phone: "", // Añadido campo de teléfono
+    document: "", // Añadido campo de documento
+    address: "", // Añadido campo de dirección
+    city: "Bogotá", // Valor por defecto
+    state: "Bogotá D.C.", // Valor por defecto
+    country: "CO", // Valor por defecto
+    postalCode: "000000", // Valor por defecto
   })
   const [passwordValidation, setPasswordValidation] = useState({
     minLength: false,
@@ -51,9 +52,24 @@ export default function CheckoutPage() {
     hasSpecial: false,
     matches: false,
   })
+  const [cardData, setCardData] = useState({
+    cardNumber: "",
+    cardName: "",
+    cardExpiry: "",
+    cardCvc: "",
+  })
+  const [pseData, setPseData] = useState({
+    bankCode: "",
+    userType: "N",
+    docType: "CC",
+    docNumber: "",
+  })
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false)
+  const [isTestMode, setIsTestMode] = useState(false)
+  const [isFormValid, setIsFormValid] = useState(false)
+  const [isPasswordValid, setIsPasswordValid] = useState(false)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -86,6 +102,9 @@ export default function CheckoutPage() {
         console.error("Error parsing user data", e)
       }
     }
+
+    // Verificar si estamos en modo de prueba
+    setIsTestMode(process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true")
   }, [])
 
   // Validar contraseña cuando cambia
@@ -100,7 +119,19 @@ export default function CheckoutPage() {
       hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
       matches: password === confirmPassword && password !== "",
     })
-  }, [formData.password, formData])
+  }, [formData.password, formData.confirmPassword, formData])
+
+  // Validar el formulario
+  useEffect(() => {
+    setIsPasswordValid(Object.values(passwordValidation).every(Boolean))
+    setIsFormValid(
+      formData.email !== "" &&
+        formData.name !== "" &&
+        (isAuthenticated || isPasswordValid) &&
+        formData.terms &&
+        (!showAdditionalFields || (formData.phone !== "" && formData.document !== "" && formData.address !== "")),
+    )
+  }, [formData, isAuthenticated, isPasswordValid, showAdditionalFields])
 
   const planId = params.plan as string
 
@@ -148,13 +179,87 @@ export default function CheckoutPage() {
     setFormData((prev) => ({ ...prev, terms: checked }))
   }
 
-  // Verificar si la contraseña cumple con todos los requisitos
-  const isPasswordValid = Object.values(passwordValidation).every(Boolean)
+  const handlePaymentMethodChange = (method: string) => {
+    setPaymentMethod(method)
+  }
 
-  // Función para registrar al usuario
+  const handleCardDataChange = (data: any) => {
+    setCardData(data)
+  }
+
+  const handlePSEDataChange = (data: any) => {
+    setPseData(data)
+  }
+
+  // Verificar si la contraseña cumple con todos los requisitos
+  //const isPasswordValid = Object.values(passwordValidation).every(Boolean)
+
   const registerUser = async () => {
+    try {
+      if (isAuthenticated) {
+        // Si el usuario ya está autenticado, no es necesario registrarlo nuevamente
+        return {
+          id: userId,
+          email: formData.email,
+          name: formData.name,
+        }
+      }
+
+      // Registrar el usuario si no está autenticado
+      const { data, error } = await register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+      })
+
+      if (error) {
+        console.error("Error al registrar el usuario:", error)
+        toast({
+          title: "Error al registrar el usuario",
+          description: error.message,
+          variant: "destructive",
+        })
+        return null
+      }
+
+      // Guardar la información del usuario en localStorage
+      localStorage.setItem(
+        "eduXUser",
+        JSON.stringify({
+          id: data.user?.id,
+          email: data.user?.email,
+          name: formData.name,
+          isLoggedIn: true,
+        }),
+      )
+
+      // Actualizar el estado de autenticación
+      setIsAuthenticated(true)
+      setUserId(data.user?.id || null)
+
+      return {
+        id: data.user?.id,
+        email: data.user?.email,
+        name: formData.name,
+      }
+    } catch (error) {
+      console.error("Error al registrar el usuario:", error)
+      toast({
+        title: "Error al registrar el usuario",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un problema al registrar el usuario. Por favor, intenta nuevamente.",
+        variant: "destructive",
+      })
+      return null
+    }
+  }
+
+  // Modificar la función handleSubmit para manejar usuarios autenticados
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setLoading(true)
-    setFormError(null)
 
     // Verificar si Supabase está disponible
     if (!supabaseStatus?.connected) {
@@ -164,8 +269,24 @@ export default function CheckoutPage() {
         variant: "destructive",
       })
       setLoading(false)
-      return null
+      return
     }
+
+    // Verificar campos adicionales si están visibles
+    if (showAdditionalFields) {
+      if (!formData.phone || !formData.document || !formData.address) {
+        toast({
+          title: "Información incompleta",
+          description: "Por favor completa todos los campos de información de contacto.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+    }
+
+    // Generar un código de referencia único para el seguimiento de la transacción
+    const referenceCode = `EDUX_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
     // Verificar que la contraseña cumpla con los requisitos
     if (!isAuthenticated && !isPasswordValid) {
@@ -175,144 +296,97 @@ export default function CheckoutPage() {
         variant: "destructive",
       })
       setLoading(false)
-      return null
-    }
-
-    try {
-      // Generar un código de referencia único para el seguimiento de la transacción
-      const referenceCode = `EDUX${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`.replace(
-        /[^a-zA-Z0-9]/g,
-        "",
-      )
-
-      // Fecha actual para el registro de la compra
-      const purchaseDate = new Date().toISOString()
-
-      // Si el usuario ya está autenticado, solo devolver la información necesaria
-      if (isAuthenticated && userId) {
-        return {
-          userId,
-          referenceCode,
-          purchaseDate,
-        }
-      }
-
-      // Si no está autenticado, registrar al usuario
-      const registerResponse = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          userData: {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            document: formData.document,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            country: formData.country,
-            postalCode: formData.postalCode,
-            plan: planId,
-            payment_status: "PENDING",
-            purchase_date: purchaseDate,
-            reference_code: referenceCode,
-          },
-        }),
-      })
-
-      if (!registerResponse.ok) {
-        const errorText = await registerResponse.text()
-        console.error("Error en la respuesta del servidor:", errorText)
-
-        // Intentar extraer el mensaje de error si es posible
-        let errorMessage = "Error en el registro"
-        try {
-          if (errorText.includes("{") && errorText.includes("}")) {
-            const jsonStart = errorText.indexOf("{")
-            const jsonEnd = errorText.lastIndexOf("}") + 1
-            const jsonStr = errorText.substring(jsonStart, jsonEnd)
-            const errorObj = JSON.parse(jsonStr)
-            if (errorObj.error) {
-              errorMessage = errorObj.error
-            }
-          }
-        } catch (e) {
-          console.error("Error al parsear respuesta de error:", e)
-        }
-
-        throw new Error(`${errorMessage} (${registerResponse.status} ${registerResponse.statusText})`)
-      }
-
-      const registerResult = await registerResponse.json()
-
-      if (!registerResult.success) {
-        throw new Error(registerResult.error || "No se pudo completar el registro")
-      }
-
-      // Guardar usuario en localStorage para la sesión actual
-      localStorage.setItem(
-        "eduXUser",
-        JSON.stringify({
-          id: registerResult.user.id,
-          name: formData.name,
-          email: formData.email,
-          isLoggedIn: true,
-          plan: planId,
-        }),
-      )
-
-      return {
-        userId: registerResult.user.id,
-        referenceCode,
-        purchaseDate,
-      }
-    } catch (error) {
-      console.error("Error en el registro:", error)
-      setFormError(error instanceof Error ? error.message : "Error desconocido")
-      setLoading(false)
-      return null
-    }
-  }
-
-  // Función para manejar el pago exitoso
-  const handlePaymentSuccess = (transactionId: string) => {
-    toast({
-      title: "Pago exitoso",
-      description: "Tu pago ha sido procesado correctamente",
-    })
-
-    // Redirigir a la página de éxito
-    router.push("/test-disc/success")
-  }
-
-  // Función para manejar el error de pago
-  const handlePaymentError = (error: string) => {
-    toast({
-      title: "Error en el pago",
-      description: error,
-      variant: "destructive",
-    })
-    setLoading(false)
-  }
-
-  // Función para iniciar el proceso de pago
-  const handleStartPayment = async () => {
-    setLoading(true)
-
-    // Registrar o actualizar usuario
-    const userInfo = await registerUser()
-
-    if (!userInfo) {
-      // El error ya fue manejado en registerUser
       return
     }
 
-    // Ahora tenemos la información del usuario y podemos proceder con el pago
-    setLoading(false)
+    try {
+      // Registrar o actualizar usuario primero
+      const userInfo = await registerUser()
+
+      if (!userInfo) {
+        // El error ya fue manejado en registerUser
+        setLoading(false)
+        return
+      }
+
+      // Ahora tenemos la información del usuario y podemos proceder con el pago
+      // Datos del comprador para PayU
+      const buyerInfo = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || "7563126", // Usar el teléfono ingresado o uno por defecto
+        document: formData.document || pseData.docNumber || "123456789", // Usar el documento ingresado o uno por defecto
+        address: formData.address || "Dirección de ejemplo", // Usar la dirección ingresada o una por defecto
+        city: formData.city,
+        state: formData.state,
+        country: formData.country,
+        postalCode: formData.postalCode,
+      }
+
+      // Monto del pago
+      const amount = plan.priceValue
+
+      // Limpiar número de tarjeta (quitar espacios)
+      const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+
+      // Imprimir las credenciales que se están usando para depuración
+      console.log("Credenciales PayU que se están usando:", {
+        NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
+        NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "No definido",
+        NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "No definido",
+        NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
+      })
+
+      let paymentResponse
+
+      if (paymentMethod === "card") {
+        paymentResponse = await processCardPayment({
+          cardNumber: cleanCardNumber,
+          cardName: cardData.cardName,
+          cardExpiry: cardData.cardExpiry,
+          cardCvc: cardData.cardCvc,
+          amount,
+          referenceCode,
+          buyerInfo,
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: "Método de pago no soportado",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      // Verificar si el pago fue exitoso
+      if (
+        paymentResponse.code !== "SUCCESS" ||
+        !paymentResponse.transactionResponse ||
+        (paymentResponse.transactionResponse.state !== "APPROVED" &&
+          paymentResponse.transactionResponse.state !== "PENDING")
+      ) {
+        const errorMessage =
+          paymentResponse?.transactionResponse?.responseMessage ||
+          paymentResponse?.error ||
+          "Error en el procesamiento del pago. Por favor, intenta nuevamente."
+        throw new Error(errorMessage)
+      }
+
+      // Redirigir a página de éxito
+      router.push("/test-disc/success")
+    } catch (error) {
+      console.error("Error al procesar el pago:", error)
+      toast({
+        title: "Error al procesar el pago",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Hubo un problema con tu pago. Por favor, verifica tus datos e intenta nuevamente.",
+        variant: "destructive",
+      })
+      setLoading(false)
+    }
   }
 
   // Componente para mostrar el estado de validación de la contraseña
@@ -351,176 +425,186 @@ export default function CheckoutPage() {
             <div className="md:col-span-3">
               <Card>
                 <CardHeader>
-                  <CardTitle>Información de Registro</CardTitle>
+                  <CardTitle>Información de Pago y Registro</CardTitle>
                   <CardDescription>
                     {isAuthenticated
-                      ? "Completa la información adicional para procesar el pago"
-                      : "Ingresa tus datos para crear tu cuenta"}
+                      ? "Completa la información de pago para actualizar tu plan"
+                      : "Ingresa tus datos para procesar el pago y crear tu cuenta"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-6">
-                    {/* Datos de registro */}
-                    <div className="space-y-4">
-                      <h3 className="font-medium">Datos de Cuenta</h3>
+                  <form onSubmit={handleSubmit}>
+                    <div className="space-y-6">
+                      {/* Datos de registro */}
+                      <div className="space-y-4">
+                        <h3 className="font-medium">Datos de Cuenta</h3>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Correo Electrónico</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="tu@email.com"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required
-                          disabled={isAuthenticated || !supabaseStatus?.connected}
-                        />
-                      </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Correo Electrónico</Label>
+                          <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            placeholder="tu@email.com"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            required
+                            disabled={isAuthenticated || !supabaseStatus?.connected}
+                          />
+                        </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="name">Nombre Completo</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          placeholder="Juan Pérez"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
-                          disabled={isAuthenticated || !supabaseStatus?.connected}
-                        />
-                      </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nombre Completo</Label>
+                          <Input
+                            id="name"
+                            name="name"
+                            placeholder="Juan Pérez"
+                            value={formData.name}
+                            onChange={handleInputChange}
+                            required
+                            disabled={isAuthenticated || !supabaseStatus?.connected}
+                          />
+                        </div>
 
-                      {!isAuthenticated && (
-                        <>
-                          <div className="space-y-2">
-                            <Label htmlFor="password">Contraseña</Label>
-                            <Input
-                              id="password"
-                              name="password"
-                              type="password"
-                              placeholder="********"
-                              value={formData.password}
-                              onChange={handleInputChange}
-                              required
-                              minLength={8}
-                              disabled={!supabaseStatus?.connected}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-                            <Input
-                              id="confirmPassword"
-                              name="confirmPassword"
-                              type="password"
-                              placeholder="********"
-                              value={formData.confirmPassword}
-                              onChange={handleInputChange}
-                              required
-                              minLength={8}
-                              disabled={!supabaseStatus?.connected}
-                            />
-                          </div>
-
-                          <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm">
-                            <p className="font-medium">La contraseña debe contener:</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <PasswordRequirement met={passwordValidation.minLength} text="Mínimo 8 caracteres" />
-                              <PasswordRequirement
-                                met={passwordValidation.hasUppercase}
-                                text="Letras mayúsculas (A-Z)"
+                        {!isAuthenticated && (
+                          <>
+                            <div className="space-y-2">
+                              <Label htmlFor="password">Contraseña</Label>
+                              <Input
+                                id="password"
+                                name="password"
+                                type="password"
+                                placeholder="********"
+                                value={formData.password}
+                                onChange={handleInputChange}
+                                required
+                                minLength={8}
+                                disabled={!supabaseStatus?.connected}
                               />
-                              <PasswordRequirement
-                                met={passwordValidation.hasLowercase}
-                                text="Letras minúsculas (a-z)"
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                              <Input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                placeholder="********"
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange}
+                                required
+                                minLength={8}
+                                disabled={!supabaseStatus?.connected}
                               />
-                              <PasswordRequirement met={passwordValidation.hasNumber} text="Números (0-9)" />
-                              <PasswordRequirement
-                                met={passwordValidation.hasSpecial}
-                                text="Caracteres especiales (!@#$%^&*)"
+                            </div>
+
+                            <div className="bg-muted/30 p-4 rounded-lg space-y-2 text-sm">
+                              <p className="font-medium">La contraseña debe contener:</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <PasswordRequirement met={passwordValidation.minLength} text="Mínimo 8 caracteres" />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasUppercase}
+                                  text="Letras mayúsculas (A-Z)"
+                                />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasLowercase}
+                                  text="Letras minúsculas (a-z)"
+                                />
+                                <PasswordRequirement met={passwordValidation.hasNumber} text="Números (0-9)" />
+                                <PasswordRequirement
+                                  met={passwordValidation.hasSpecial}
+                                  text="Caracteres especiales (!@#$%^&*)"
+                                />
+                                <PasswordRequirement
+                                  met={passwordValidation.matches}
+                                  text="Las contraseñas coinciden"
+                                />
+                              </div>
+                            </div>
+                          </>
+                        )}
+
+                        {/* Botón para mostrar/ocultar campos adicionales */}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full mt-2"
+                          onClick={() => setShowAdditionalFields(!showAdditionalFields)}
+                        >
+                          {showAdditionalFields ? "Ocultar información adicional" : "Añadir información de contacto"}
+                        </Button>
+
+                        {/* Campos adicionales */}
+                        {showAdditionalFields && (
+                          <div className="space-y-4 border p-4 rounded-md">
+                            <h4 className="font-medium">Información de Contacto</h4>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="phone">Teléfono</Label>
+                              <Input
+                                id="phone"
+                                name="phone"
+                                placeholder="300 123 4567"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
                               />
-                              <PasswordRequirement met={passwordValidation.matches} text="Las contraseñas coinciden" />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="document">Número de Documento</Label>
+                              <Input
+                                id="document"
+                                name="document"
+                                placeholder="1234567890"
+                                value={formData.document}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="address">Dirección</Label>
+                              <Input
+                                id="address"
+                                name="address"
+                                placeholder="Calle 123 # 45-67"
+                                value={formData.address}
+                                onChange={handleInputChange}
+                                disabled={!supabaseStatus?.connected}
+                              />
                             </div>
                           </div>
-                        </>
-                      )}
-
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          placeholder="300 123 4567"
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          disabled={!supabaseStatus?.connected}
-                        />
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="document">Número de Documento</Label>
-                        <Input
-                          id="document"
-                          name="document"
-                          placeholder="1234567890"
-                          value={formData.document}
-                          onChange={handleInputChange}
+                      <Separator />
+
+                      {/* Términos y condiciones */}
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="terms"
+                          checked={formData.terms}
+                          onCheckedChange={handleCheckboxChange}
+                          required
                           disabled={!supabaseStatus?.connected}
                         />
+                        <Label htmlFor="terms" className="text-sm">
+                          Acepto los{" "}
+                          <a href="/legal?section=terminos" className="text-primary hover:underline">
+                            términos y condiciones
+                          </a>
+                        </Label>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Dirección</Label>
-                        <Input
-                          id="address"
-                          name="address"
-                          placeholder="Calle 123 # 45-67"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          disabled={!supabaseStatus?.connected}
-                        />
+                      {/* Mensaje de seguridad */}
+                      <div className="flex items-center p-3 bg-green-50 rounded-md text-sm">
+                        <ShieldCheck className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
+                        <p className="text-green-700">Tus datos están protegidos con encriptación de grado bancario.</p>
                       </div>
                     </div>
-
-                    <Separator />
-
-                    {/* Términos y condiciones */}
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="terms"
-                        checked={formData.terms}
-                        onCheckedChange={handleCheckboxChange}
-                        required
-                        disabled={!supabaseStatus?.connected}
-                      />
-                      <Label htmlFor="terms" className="text-sm">
-                        Acepto los{" "}
-                        <a href="/legal?section=terminos" className="text-primary hover:underline">
-                          términos y condiciones
-                        </a>
-                      </Label>
-                    </div>
-
-                    {/* Mensaje de seguridad */}
-                    <div className="flex items-center p-3 bg-green-50 rounded-md text-sm">
-                      <ShieldCheck className="h-4 w-4 text-green-500 mr-2 flex-shrink-0" />
-                      <p className="text-green-700">Tus datos están protegidos con encriptación de grado bancario.</p>
-                    </div>
-                  </div>
+                  </form>
                 </CardContent>
-                <CardFooter>
-                  <Button className="w-full" onClick={handleStartPayment} disabled={loading || !formData.terms}>
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Procesando...
-                      </>
-                    ) : (
-                      "Continuar al Pago"
-                    )}
-                  </Button>
-                </CardFooter>
               </Card>
             </div>
 
@@ -552,70 +636,19 @@ export default function CheckoutPage() {
                     </div>
                   </CardContent>
                   <CardFooter>
-                    <Tabs defaultValue="redirect" className="w-full" onValueChange={setPaymentMethod}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="redirect">PayU Checkout</TabsTrigger>
-                        <TabsTrigger value="card">Tarjeta de Crédito</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="redirect" className="mt-4">
-                        <PayUPaymentForm
-                          referenceCode={`EDUX${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`}
-                          description={`Test DISC ${plan.name}`}
-                          amount={plan.priceValue}
-                          currency="COP"
-                          buyerInfo={{
-                            name: formData.name,
-                            email: formData.email,
-                            phone: formData.phone || "3001234567",
-                            document: formData.document || "1234567890",
-                            address: formData.address || "Dirección de ejemplo",
-                            city: formData.city,
-                            state: formData.state,
-                            country: formData.country,
-                            postalCode: formData.postalCode,
-                          }}
-                          onSuccess={(url) => {
-                            // Primero registrar al usuario
-                            registerUser().then((userInfo) => {
-                              if (userInfo) {
-                                // Luego redirigir a la URL de pago
-                                window.location.href = url
-                              }
-                            })
-                          }}
-                          onError={handlePaymentError}
-                        />
-                      </TabsContent>
-                      <TabsContent value="card" className="mt-4">
-                        <PayUCardForm
-                          referenceCode={`EDUX${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`}
-                          description={`Test DISC ${plan.name}`}
-                          amount={plan.priceValue}
-                          currency="COP"
-                          buyerInfo={{
-                            name: formData.name,
-                            email: formData.email,
-                            phone: formData.phone || "3001234567",
-                            document: formData.document || "1234567890",
-                            address: formData.address || "Dirección de ejemplo",
-                            city: formData.city,
-                            state: formData.state,
-                            country: formData.country,
-                            postalCode: formData.postalCode,
-                          }}
-                          onSuccess={(transactionId) => {
-                            // Primero registrar al usuario
-                            registerUser().then((userInfo) => {
-                              if (userInfo) {
-                                // Luego manejar el éxito del pago
-                                handlePaymentSuccess(transactionId)
-                              }
-                            })
-                          }}
-                          onError={handlePaymentError}
-                        />
-                      </TabsContent>
-                    </Tabs>
+                    <Button className="w-full" onClick={handleSubmit} disabled={loading || !isFormValid}>
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Procesando...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Completar Compra
+                        </>
+                      )}
+                    </Button>
                   </CardFooter>
                 </Card>
               </div>

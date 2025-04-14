@@ -151,13 +151,13 @@ export function generatePayUSignature(
   amount: number,
   currency: string,
 ): string {
-  // Asegurar que el referenceCode no tenga espacios al inicio o final
+  // Limpiar todos los valores para evitar problemas con espacios o caracteres especiales
+  const cleanApiKey = apiKey.trim()
+  const cleanMerchantId = merchantId.trim()
   const cleanReferenceCode = referenceCode.trim()
 
   // IMPORTANTE: Para COP, PayU espera valores enteros sin decimales
-  // Para otras monedas, puede requerir 2 decimales
   let formattedAmount: string
-
   if (currency === "COP") {
     // Para COP, redondear a entero y convertir a string
     formattedAmount = Math.round(amount).toString()
@@ -167,9 +167,17 @@ export function generatePayUSignature(
   }
 
   // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
+  const signatureString = `${cleanApiKey}~${cleanMerchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
 
-  console.log("String para firma PayU:", signatureString)
+  console.log("String para firma PayU (limpio):", signatureString)
+
+  // Verificar cada componente individualmente para depuración
+  console.log("Componentes de la firma:")
+  console.log("- apiKey:", cleanApiKey, "- Longitud:", cleanApiKey.length)
+  console.log("- merchantId:", cleanMerchantId, "- Longitud:", cleanMerchantId.length)
+  console.log("- referenceCode:", cleanReferenceCode, "- Longitud:", cleanReferenceCode.length)
+  console.log("- formattedAmount:", formattedAmount, "- Longitud:", formattedAmount.length)
+  console.log("- currency:", currency, "- Longitud:", currency.length)
 
   // Generar el hash MD5
   const signature = crypto.createHash("md5").update(signatureString).digest("hex")
@@ -261,6 +269,28 @@ function debugReferenceCode(referenceCode: string, payuRequest: any) {
     Array.from(referenceCode).map((c) => `'${c}' (${c.charCodeAt(0)})`),
   )
   console.log("==============================")
+}
+
+// Añade esta función para verificar la firma generada
+function verifySignature(request: PayURequest): boolean {
+  const { apiKey } = request.merchant
+  const { referenceCode, additionalValues } = request.transaction.order
+  const amount = additionalValues.TX_VALUE.value
+  const currency = additionalValues.TX_VALUE.currency
+  const merchantId = request.transaction.order.accountId
+
+  // Generar la firma de nuevo para verificar
+  const calculatedSignature = generatePayUSignature(apiKey, merchantId, referenceCode, amount, currency)
+
+  // Comparar con la firma en la solicitud
+  const requestSignature = request.transaction.order.signature
+
+  console.log("Verificación de firma:")
+  console.log("- Firma en solicitud:", requestSignature)
+  console.log("- Firma calculada:", calculatedSignature)
+  console.log("- ¿Coinciden?", requestSignature === calculatedSignature)
+
+  return requestSignature === calculatedSignature
 }
 
 // Mejoremos la función processCardPayment para manejar mejor los errores y la validación
@@ -369,7 +399,7 @@ export async function processCardPayment(paymentData: {
           notifyUrl: "https://edux.com.co/api/payment/notification",
           additionalValues: {
             TX_VALUE: {
-              value: paymentData.amount,
+              value: Math.round(paymentData.amount), // Asegúrate de que sea el mismo formato que en la firma
               currency: "COP",
             },
             TX_TAX: {
@@ -437,6 +467,9 @@ export async function processCardPayment(paymentData: {
       amount: paymentData.amount,
       formattedAmount: Math.round(paymentData.amount).toString(),
     })
+
+    // Usa esta función justo antes de enviar la solicitud
+    verifySignature(payuRequest)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {

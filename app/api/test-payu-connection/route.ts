@@ -66,10 +66,56 @@ export async function GET() {
     // Procesar la respuesta
     const data = await response.json()
 
+    // Añade esta sección al endpoint para probar específicamente la firma
+
+    // Crear una solicitud de prueba con firma
+    const testReferenceCode = `TEST${Date.now()}`
+    const testAmount = 1000 // 1000 COP
+    const testCurrency = "COP"
+
+    // Generar firma para la prueba
+    const crypto = require("crypto")
+    const signatureString = `${apiKey}~${merchantId}~${testReferenceCode}~${testAmount}~${testCurrency}`
+    const testSignature = crypto.createHash("md5").update(signatureString).digest("hex")
+
+    // Crear una solicitud de prueba completa
+    const testRequest = {
+      language: "es",
+      command: "PING",
+      merchant: {
+        apiKey,
+        apiLogin,
+      },
+      test: isTestMode,
+      // Incluir información adicional para verificar la firma
+      transaction: {
+        order: {
+          accountId: merchantId,
+          referenceCode: testReferenceCode,
+          description: "Test de firma PayU",
+          language: "es",
+          signature: testSignature,
+          additionalValues: {
+            TX_VALUE: {
+              value: testAmount,
+              currency: testCurrency,
+            },
+          },
+        },
+      },
+    }
+
     return NextResponse.json({
       status: "success",
       message: "Conexión con PayU establecida correctamente",
       payuResponse: data,
+      signatureTest: {
+        referenceCode: testReferenceCode,
+        amount: testAmount,
+        currency: testCurrency,
+        signatureString,
+        signature: testSignature,
+      },
     })
   } catch (error) {
     console.error("Error al probar la conexión con PayU:", error)

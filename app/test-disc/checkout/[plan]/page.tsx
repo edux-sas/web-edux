@@ -15,7 +15,8 @@ import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
 import { PaymentMethods } from "@/components/payment-methods"
-import { processCardPayment } from "@/lib/payu"
+// Reemplazar la importación de processCardPayment de lib/payu
+import { processCardPayment } from "@/lib/payu-sdk"
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -68,6 +69,7 @@ export default function CheckoutPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [showAdditionalFields, setShowAdditionalFields] = useState(false)
   const [isTestMode, setIsTestMode] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -124,9 +126,9 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$3000.0",
+      price: "$169.000",
       priceCurrency: "COP",
-      priceValue: 3000,
+      priceValue: 169000,
     },
     enterprise: {
       name: "Empresarial",
@@ -184,301 +186,288 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
-    // Verificar si Supabase está disponible
-    if (!supabaseStatus?.connected) {
-      toast({
-        title: "Error de conexión",
-        description: "No se puede conectar con el servidor. Por favor, intenta más tarde.",
-        variant: "destructive",
-      })
-      setLoading(false)
-      return
-    }
-
-    // Verificar campos adicionales si están visibles
-    if (showAdditionalFields) {
-      if (!formData.phone || !formData.document || !formData.address) {
+    try {
+      // Verificar si Supabase está disponible
+      if (!supabaseStatus?.connected) {
         toast({
-          title: "Información incompleta",
-          description: "Por favor completa todos los campos de información de contacto.",
+          title: "Error de conexión",
+          description: "No se puede conectar con el servidor. Por favor, intenta más tarde.",
           variant: "destructive",
         })
         setLoading(false)
         return
       }
-    }
 
-    // Generar un código de referencia único para el seguimiento de la transacción
-    const referenceCode = `EDUX_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
-
-    // Verificar que la contraseña cumpla con los requisitos
-    if (!isAuthenticated && !isPasswordValid) {
-      toast({
-        title: "Contraseña inválida",
-        description: "Por favor, asegúrate de que la contraseña cumpla con todos los requisitos.",
-        variant: "destructive",
-      })
-      setLoading(false)
-      return
-    }
-
-    try {
-      // Procesar el pago según el método seleccionado
-      let paymentResponse
-
-      // Datos del comprador para PayU
-      const buyerInfo = {
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone || "7563126", // Usar el teléfono ingresado o uno por defecto
-        document: formData.document || pseData.docNumber || "123456789", // Usar el documento ingresado o uno por defecto
-        address: formData.address || "Dirección de ejemplo", // Usar la dirección ingresada o una por defecto
-        city: formData.city,
-        state: formData.state,
-        country: formData.country,
-        postalCode: formData.postalCode,
-      }
-
-      // Monto del pago
-      const amount = plan.priceValue
-
-      // Limpiar número de tarjeta (quitar espacios)
-      const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
-
-      // Imprimir las credenciales que se están usando para depuración
-      console.log("Credenciales PayU que se están usando:", {
-        NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
-        NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "No definido",
-        NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "No definido",
-        NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
-      })
-
-      if (paymentMethod === "card") {
-        paymentResponse = await processCardPayment({
-          cardNumber: cleanCardNumber,
-          cardName: cardData.cardName,
-          cardExpiry: cardData.cardExpiry,
-          cardCvc: cardData.cardCvc,
-          amount,
-          buyerInfo,
-          referenceCode, // Añadir el código de referencia
-        })
-      }
-      /* PSE está oculto pero mantenemos el código para uso futuro
-      else if (paymentMethod === "pse") {
-        paymentResponse = await processPSEPayment({
-          amount,
-          bankCode: pseData.bankCode,
-          userType: pseData.userType as "N" | "J",
-          docType: pseData.docType,
-          docNumber: pseData.docNumber,
-          buyerInfo,
-          referenceCode, // Añadir el código de referencia
-        })
-
-        // Si es PSE y la respuesta es exitosa, redirigir al banco
-        if (
-          paymentResponse.code === "SUCCESS" &&
-          paymentResponse.transactionResponse.state === "PENDING" &&
-          paymentResponse.transactionResponse.extraParameters?.BANK_URL
-        ) {
-          window.location.href = paymentResponse.transactionResponse.extraParameters.BANK_URL
-          return
-        }
-      }
-      */
-
-      // Verificar si el pago fue exitoso
-      if (
-        !paymentResponse ||
-        paymentResponse.code !== "SUCCESS" ||
-        !paymentResponse.transactionResponse ||
-        (paymentResponse.transactionResponse.state !== "APPROVED" &&
-          paymentResponse.transactionResponse.state !== "PENDING")
-      ) {
-        const errorMessage =
-          paymentResponse?.transactionResponse?.responseMessage ||
-          paymentResponse?.error ||
-          "Error en el procesamiento del pago. Por favor, intenta nuevamente."
-        throw new Error(errorMessage)
-      }
-
-      // Fecha actual para el registro de la compra
-      const purchaseDate = new Date().toISOString()
-
-      // Si el usuario ya está autenticado, actualizar su plan
-      if (isAuthenticated && userId) {
-        try {
-          const response = await fetch("/api/user/update-plan", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              userId,
-              plan: planId,
-              payment_status: paymentResponse.transactionResponse.state,
-              purchase_date: purchaseDate,
-              amount,
-              transaction_id: paymentResponse.transactionResponse.transactionId,
-            }),
+      // Verificar campos adicionales si están visibles
+      if (showAdditionalFields) {
+        if (!formData.phone || !formData.document || !formData.address) {
+          toast({
+            title: "Información incompleta",
+            description: "Por favor completa todos los campos de información de contacto.",
+            variant: "destructive",
           })
-
-          if (!response.ok) {
-            throw new Error("Error al actualizar el plan del usuario")
-          }
-
-          // Actualizar la información del usuario en localStorage
-          const userData = JSON.parse(localStorage.getItem("eduXUser") || "{}")
-          userData.plan = planId
-          localStorage.setItem("eduXUser", JSON.stringify(userData))
-
-          // Redirigir a página de éxito
-          router.push("/test-disc/success")
+          setLoading(false)
           return
-        } catch (error) {
-          console.error("Error al actualizar el plan:", error)
-          throw error
         }
       }
 
-      // Si no está autenticado, continuar con el registro normal
-      const registerData = {
-        email: formData.email,
-        password: formData.password,
-        userData: {
+      // Generar un código de referencia único para el seguimiento de la transacción
+      const referenceCode = `EDUX_${Date.now()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`
+
+      // Verificar que la contraseña cumpla con los requisitos
+      if (!isAuthenticated && !isPasswordValid) {
+        toast({
+          title: "Contraseña inválida",
+          description: "Por favor, asegúrate de que la contraseña cumpla con todos los requisitos.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      try {
+        // Procesar el pago según el método seleccionado
+        let paymentResponse
+
+        // Datos del comprador para PayU
+        const buyerInfo = {
           name: formData.name,
           email: formData.email,
-          phone: formData.phone,
-          document: formData.document,
-          address: formData.address,
+          phone: formData.phone || "7563126", // Usar el teléfono ingresado o uno por defecto
+          document: formData.document || "123456789", // Usar el documento ingresado o uno por defecto
+          address: formData.address || "Dirección de ejemplo", // Usar la dirección ingresada o una por defecto
           city: formData.city,
           state: formData.state,
           country: formData.country,
           postalCode: formData.postalCode,
-          plan: planId,
-          payment_status: paymentResponse.transactionResponse.state,
-          purchase_date: purchaseDate,
-          amount,
-          transaction_id: paymentResponse.transactionResponse.transactionId,
-          reference_code: referenceCode, // Añadir el código de referencia
-        },
-      }
-
-      console.log("Enviando datos de registro:", JSON.stringify(registerData))
-
-      // Verificar las variables de entorno antes de hacer la solicitud
-      try {
-        const envCheckResponse = await fetch("/api/check-env")
-        const envCheckData = await envCheckResponse.json()
-        console.log("Estado de las variables de entorno:", envCheckData)
-
-        if (!envCheckData.variables.SUPABASE_SERVICE_ROLE_KEY.includes("Definida")) {
-          throw new Error(
-            "La clave de servicio de Supabase no está definida. Por favor, configura la variable de entorno SUPABASE_SERVICE_ROLE_KEY.",
-          )
         }
 
-        // Verificar también las variables de PayU
-        if (!envCheckData.variables.NEXT_PUBLIC_PAYU_API_KEY?.includes("Definida")) {
-          throw new Error(
-            "Las credenciales de PayU no están configuradas correctamente. Por favor, verifica las variables de entorno con prefijo NEXT_PUBLIC_PAYU_.",
-          )
+        // Monto del pago
+        const amount = plan.priceValue
+
+        // Limpiar número de tarjeta (quitar espacios)
+        const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+
+        if (paymentMethod === "card") {
+          // Usar el SDK de PayU en lugar de la API directa
+          paymentResponse = await processCardPayment({
+            cardInfo: {
+              cardNumber: cleanCardNumber,
+              cardName: cardData.cardName,
+              cardExpiry: cardData.cardExpiry,
+              cardCvc: cardData.cardCvc,
+            },
+            amount,
+            referenceCode,
+            buyerInfo,
+            description: `Compra de Test DISC ${plan.name}`,
+          })
         }
-      } catch (envError) {
-        console.error("Error al verificar variables de entorno:", envError)
-        toast({
-          title: "Error de configuración",
-          description:
-            envError instanceof Error ? envError.message : "Error al verificar la configuración del servidor.",
-          variant: "destructive",
-        })
-        setLoading(false)
-        return
-      }
 
-      // Registrar usuario a través de la API en lugar de directamente
-      const registerResponse = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(registerData),
-      })
+        // Verificar si el pago fue exitoso
+        if (
+          !paymentResponse ||
+          paymentResponse.code !== "SUCCESS" ||
+          !paymentResponse.transactionResponse ||
+          (paymentResponse.transactionResponse.state !== "APPROVED" &&
+            paymentResponse.transactionResponse.state !== "PENDING")
+        ) {
+          const errorMessage =
+            paymentResponse?.transactionResponse?.responseMessage ||
+            paymentResponse?.error ||
+            "Error en el procesamiento del pago. Por favor, intenta nuevamente."
+          throw new Error(errorMessage)
+        }
 
-      if (!registerResponse.ok) {
-        const errorText = await registerResponse.text()
-        console.error("Error en la respuesta del servidor:", errorText)
+        // Fecha actual para el registro de la compra
+        const purchaseDate = new Date().toISOString()
 
-        // Intentar extraer el mensaje de error si es posible
-        let errorMessage = "Error en el registro"
-        try {
-          if (errorText.includes("{") && errorText.includes("}")) {
-            const jsonStart = errorText.indexOf("{")
-            const jsonEnd = errorText.lastIndexOf("}") + 1
-            const jsonStr = errorText.substring(jsonStart, jsonEnd)
-            const errorObj = JSON.parse(jsonStr)
-            if (errorObj.error) {
-              errorMessage = errorObj.error
+        // Si el usuario ya está autenticado, actualizar su plan
+        if (isAuthenticated && userId) {
+          try {
+            const response = await fetch("/api/user/update-plan", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userId,
+                plan: planId,
+                payment_status: paymentResponse.transactionResponse.state,
+                purchase_date: purchaseDate,
+                amount,
+                transaction_id: paymentResponse.transactionResponse.transactionId,
+              }),
+            })
+
+            if (!response.ok) {
+              throw new Error("Error al actualizar el plan del usuario")
             }
+
+            // Actualizar la información del usuario en localStorage
+            const userData = JSON.parse(localStorage.getItem("eduXUser") || "{}")
+            userData.plan = planId
+            localStorage.setItem("eduXUser", JSON.stringify(userData))
+
+            // Redirigir a página de éxito
+            router.push("/test-disc/success")
+            return
+          } catch (error) {
+            console.error("Error al actualizar el plan:", error)
+            throw error
           }
-        } catch (e) {
-          console.error("Error al parsear respuesta de error:", e)
         }
 
-        throw new Error(`${errorMessage} (${registerResponse.status} ${registerResponse.statusText})`)
-      }
-
-      const registerResult = await registerResponse.json()
-
-      if (!registerResult.success) {
-        toast({
-          title: "Error al registrar usuario",
-          description: registerResult.error || "No se pudo completar el registro. Por favor, intenta nuevamente.",
-          variant: "destructive",
-        })
-        setLoading(false)
-        return
-      }
-
-      const user = registerResult.user
-
-      // Guardar usuario en localStorage para la sesión actual
-      localStorage.setItem(
-        "eduXUser",
-        JSON.stringify({
-          id: user.id,
-          name: formData.name,
+        // Si no está autenticado, continuar con el registro normal
+        const registerData = {
           email: formData.email,
-          isLoggedIn: true,
-          plan: planId,
-        }),
-      )
+          password: formData.password,
+          userData: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+            document: formData.document,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            country: formData.country,
+            postalCode: formData.postalCode,
+            plan: planId,
+            payment_status: paymentResponse.transactionResponse.state,
+            purchase_date: purchaseDate,
+            amount,
+            transaction_id: paymentResponse.transactionResponse.transactionId,
+            reference_code: referenceCode, // Añadir el código de referencia
+          },
+        }
 
-      // Guardar el estado de la integración con Moodle
-      if (registerResult.moodle) {
-        console.log("Guardando estado de Moodle en localStorage:", registerResult.moodle)
-        localStorage.setItem("moodleRegistrationStatus", JSON.stringify(registerResult.moodle))
+        console.log("Enviando datos de registro:", JSON.stringify(registerData))
 
-        // Si hay un nombre de usuario de Moodle, asegurarnos de que se guarde en el objeto de usuario
-        if (registerResult.moodle.username) {
-          const userData = {
+        // Verificar las variables de entorno antes de hacer la solicitud
+        try {
+          const envCheckResponse = await fetch("/api/check-env")
+          const envCheckData = await envCheckResponse.json()
+          console.log("Estado de las variables de entorno:", envCheckData)
+
+          if (!envCheckData.variables.SUPABASE_SERVICE_ROLE_KEY.includes("Definida")) {
+            throw new Error(
+              "La clave de servicio de Supabase no está definida. Por favor, configura la variable de entorno SUPABASE_SERVICE_ROLE_KEY.",
+            )
+          }
+
+          // Verificar también las variables de PayU
+          if (!envCheckData.variables.NEXT_PUBLIC_PAYU_API_KEY?.includes("Definida")) {
+            throw new Error(
+              "Las credenciales de PayU no están configuradas correctamente. Por favor, verifica las variables de entorno con prefijo NEXT_PUBLIC_PAYU_.",
+            )
+          }
+        } catch (envError) {
+          console.error("Error al verificar variables de entorno:", envError)
+          toast({
+            title: "Error de configuración",
+            description:
+              envError instanceof Error ? envError.message : "Error al verificar la configuración del servidor.",
+            variant: "destructive",
+          })
+          setLoading(false)
+          return
+        }
+
+        // Registrar usuario a través de la API en lugar de directamente
+        const registerResponse = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(registerData),
+        })
+
+        if (!registerResponse.ok) {
+          const errorText = await registerResponse.text()
+          console.error("Error en la respuesta del servidor:", errorText)
+
+          // Intentar extraer el mensaje de error si es posible
+          let errorMessage = "Error en el registro"
+          try {
+            if (errorText.includes("{") && errorText.includes("}")) {
+              const jsonStart = errorText.indexOf("{")
+              const jsonEnd = errorText.lastIndexOf("}") + 1
+              const jsonStr = errorText.substring(jsonStart, jsonEnd)
+              const errorObj = JSON.parse(jsonStr)
+              if (errorObj.error) {
+                errorMessage = errorObj.error
+              }
+            }
+          } catch (e) {
+            console.error("Error al parsear respuesta de error:", e)
+          }
+
+          throw new Error(`${errorMessage} (${registerResponse.status} ${registerResponse.statusText})`)
+        }
+
+        const registerResult = await registerResponse.json()
+
+        if (!registerResult.success) {
+          toast({
+            title: "Error al registrar usuario",
+            description: registerResult.error || "No se pudo completar el registro. Por favor, intenta nuevamente.",
+            variant: "destructive",
+          })
+          setLoading(false)
+          return
+        }
+
+        const user = registerResult.user
+
+        // Guardar usuario en localStorage para la sesión actual
+        localStorage.setItem(
+          "eduXUser",
+          JSON.stringify({
             id: user.id,
             name: formData.name,
             email: formData.email,
             isLoggedIn: true,
             plan: planId,
-            moodle_username: registerResult.moodle.username,
+          }),
+        )
+
+        // Guardar el estado de la integración con Moodle
+        if (registerResult.moodle) {
+          console.log("Guardando estado de Moodle en localStorage:", registerResult.moodle)
+          localStorage.setItem("moodleRegistrationStatus", JSON.stringify(registerResult.moodle))
+
+          // Si hay un nombre de usuario de Moodle, asegurarnos de que se guarde en el objeto de usuario
+          if (registerResult.moodle.username) {
+            const userData = {
+              id: user.id,
+              name: formData.name,
+              email: formData.email,
+              isLoggedIn: true,
+              plan: planId,
+              moodle_username: registerResult.moodle.username,
+            }
+
+            console.log("Guardando usuario con moodle_username en localStorage:", userData)
+            localStorage.setItem("eduXUser", JSON.stringify(userData))
           }
-
-          console.log("Guardando usuario con moodle_username en localStorage:", userData)
-          localStorage.setItem("eduXUser", JSON.stringify(userData))
         }
-      }
 
-      // Redirigir a página de éxito
-      router.push("/test-disc/success")
+        // Redirigir a página de éxito
+        router.push("/test-disc/success")
+      } catch (error) {
+        console.error("Error en el proceso de pago:", error)
+        toast({
+          title: "Error al procesar el pago",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Hubo un problema con tu pago. Por favor, verifica tus datos e intenta nuevamente.",
+          variant: "destructive",
+        })
+        setLoading(false)
+      }
     } catch (error) {
       console.error("Error en el proceso de pago:", error)
       toast({

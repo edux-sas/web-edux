@@ -197,12 +197,15 @@ export async function processCardPayment(paymentData: {
       test: PayUConfig.isTest,
     }
 
-    console.log("Sending request to PayU:", {
+    console.log("Enviando solicitud a PayU (SDK):", {
       url: PayUConfig.paymentsUrl,
       referenceCode: paymentData.referenceCode,
       signature,
       deviceSessionId,
     })
+
+    // Log the signature string for debugging
+    console.log("Firma generada para PayU (SDK):", signature)
 
     // Send request to PayU
     const response = await axios.post(PayUConfig.paymentsUrl, payuRequest, {
@@ -263,7 +266,9 @@ function generateSignature(
   amount: number,
   currency: string,
 ): string {
-  // Clean referenceCode
+  // Clean all inputs to avoid issues with spaces or special characters
+  const cleanApiKey = apiKey.trim()
+  const cleanMerchantId = merchantId.trim()
   const cleanReferenceCode = referenceCode.trim()
 
   // Format amount
@@ -275,13 +280,19 @@ function generateSignature(
   }
 
   // Create signature string: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
+  const signatureString = `${cleanApiKey}~${cleanMerchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
 
-  console.log("Signature string:", signatureString)
+  console.log("String para firma PayU (SDK):", signatureString)
+  console.log("Componentes de la firma:")
+  console.log("- apiKey:", cleanApiKey, "- Longitud:", cleanApiKey.length)
+  console.log("- merchantId:", cleanMerchantId)
+  console.log("- referenceCode:", cleanReferenceCode)
+  console.log("- formattedAmount:", formattedAmount)
+  console.log("- currency:", currency)
 
   // Generate MD5 hash
   const signature = crypto.createHash("md5").update(signatureString).digest("hex")
-  console.log("Generated signature (MD5):", signature)
+  console.log("Firma generada (MD5):", signature)
 
   return signature
 }

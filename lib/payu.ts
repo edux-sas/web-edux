@@ -142,7 +142,7 @@ export type PayUResponse = {
   }
 }
 
-// Modifiquemos la función generatePayUSignature para asegurar que no haya problemas con el referenceCode
+// Modifiquemos la función generatePayUSignature para garantizar una firma correcta
 
 export function generatePayUSignature(
   apiKey: string,
@@ -170,23 +170,6 @@ export function generatePayUSignature(
   const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
-
-  // Información detallada para depuración
-  console.log("Análisis de componentes de la firma:")
-  console.log(
-    "- apiKey:",
-    apiKey,
-    "- Longitud:",
-    apiKey.length,
-    "- Último carácter:",
-    apiKey.slice(-1),
-    "- Código ASCII:",
-    apiKey.slice(-1).charCodeAt(0),
-  )
-  console.log("- merchantId:", merchantId)
-  console.log("- referenceCode:", cleanReferenceCode, "- Original:", referenceCode)
-  console.log("- formattedAmount:", formattedAmount)
-  console.log("- currency:", currency)
 
   // Generar el hash MD5
   const signature = crypto.createHash("md5").update(signatureString).digest("hex")
@@ -280,7 +263,8 @@ function debugReferenceCode(referenceCode: string, payuRequest: any) {
   console.log("==============================")
 }
 
-// Función actualizada para procesar pagos con tarjeta
+// Mejoremos la función processCardPayment para manejar mejor los errores y la validación
+
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -332,8 +316,7 @@ export async function processCardPayment(paymentData: {
       ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
       : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-    // Usar el código de referencia proporcionado o generar uno nuevo
-    // Asegurarnos de que no tenga espacios ni caracteres problemáticos
+    // Generar un código de referencia limpio y consistente
     let referenceCode = paymentData.referenceCode || `EDUX${Date.now()}${Math.floor(Math.random() * 1000)}`
     referenceCode = referenceCode.trim().replace(/[^a-zA-Z0-9]/g, "")
 
@@ -363,11 +346,9 @@ export async function processCardPayment(paymentData: {
     const taxValue = paymentData.amount - taxBase
 
     // Generar deviceSessionId según la documentación de PayU
-    const timestamp = Date.now().toString()
-    const randomValue = Math.random().toString(36).substring(2, 15)
     const deviceSessionId = crypto
       .createHash("md5")
-      .update(timestamp + randomValue)
+      .update(Date.now().toString() + Math.random().toString(36).substring(2, 15))
       .digest("hex")
 
     // Construir la solicitud para PayU
@@ -382,7 +363,7 @@ export async function processCardPayment(paymentData: {
         order: {
           accountId: merchantId,
           referenceCode,
-          description: "Pago eduX - Tarjeta de crédito",
+          description: "Pago eduX - Test DISC",
           language: "es",
           signature,
           notifyUrl: "https://edux.com.co/api/payment/notification",
@@ -392,11 +373,11 @@ export async function processCardPayment(paymentData: {
               currency: "COP",
             },
             TX_TAX: {
-              value: taxValue, // IVA ya incluido en el precio
+              value: taxValue,
               currency: "COP",
             },
             TX_TAX_RETURN_BASE: {
-              value: taxBase, // Base gravable
+              value: taxBase,
               currency: "COP",
             },
           },
@@ -436,33 +417,26 @@ export async function processCardPayment(paymentData: {
           name: paymentData.cardName,
         },
         extraParameters: {
-          INSTALLMENTS_NUMBER: "1", // Número de cuotas
+          INSTALLMENTS_NUMBER: "1",
         },
         type: "AUTHORIZATION_AND_CAPTURE",
         paymentMethod,
         paymentCountry: "CO",
-        deviceSessionId, // Usar el deviceSessionId generado según la documentación
-        ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
-        cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
-        userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
+        deviceSessionId,
+        ipAddress: "127.0.0.1",
+        cookie: crypto.randomBytes(16).toString("hex"),
+        userAgent: "Mozilla/5.0",
       },
       test: isTestMode,
     }
 
     console.log("Enviando solicitud a PayU:", {
       url: apiUrl,
-      apiKey: apiKey ? "Definido" : "No definido",
-      apiLogin: apiLogin ? "Definido" : "No definido",
-      merchantId: merchantId ? "Definido" : "No definido",
-      isTestMode,
       referenceCode,
-      deviceSessionId,
+      signature,
+      amount: paymentData.amount,
+      formattedAmount: Math.round(paymentData.amount).toString(),
     })
-
-    // DEPURACIÓN: Imprimir la firma generada
-    console.log("Firma generada:", signature)
-    console.log("Monto para transacción:", paymentData.amount)
-    debugReferenceCode(referenceCode, payuRequest)
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {
@@ -488,26 +462,6 @@ export async function processCardPayment(paymentData: {
     if (!data || !data.code) {
       console.error("Respuesta de PayU inválida:", data)
       throw new Error("Respuesta de pago inválida. Por favor, intenta nuevamente.")
-    }
-
-    // Si hay un error en la respuesta de PayU, formatearlo adecuadamente
-    if (data.code !== "SUCCESS") {
-      const errorMessage =
-        data.error ||
-        (data.transactionResponse && data.transactionResponse.responseMessage) ||
-        "Error en el procesamiento del pago"
-      console.error("Error en respuesta de PayU:", errorMessage, data)
-
-      // Asegurar que la respuesta tenga una estructura consistente incluso en caso de error
-      return {
-        code: data.code,
-        error: errorMessage,
-        transactionResponse: data.transactionResponse || {
-          state: "DECLINED",
-          responseMessage: errorMessage,
-          responseCode: "ERROR",
-        },
-      }
     }
 
     return data

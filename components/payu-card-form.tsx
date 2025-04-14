@@ -110,9 +110,18 @@ export function PayUCardForm({
         }),
       })
 
+      // Improved error handling
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+        let errorMessage = `Error ${response.status}: ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData && errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (jsonError) {
+          console.error("Error al parsear respuesta JSON:", jsonError)
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()

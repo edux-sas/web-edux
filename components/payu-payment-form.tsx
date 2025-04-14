@@ -58,9 +58,18 @@ export function PayUPaymentForm({
         }),
       })
 
+      // Improved error handling
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`)
+        let errorMessage = `Error ${response.status}: ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          if (errorData && errorData.error) {
+            errorMessage = errorData.error
+          }
+        } catch (jsonError) {
+          console.error("Error al parsear respuesta JSON:", jsonError)
+        }
+        throw new Error(errorMessage)
       }
 
       const data = await response.json()
@@ -78,7 +87,7 @@ export function PayUPaymentForm({
       window.location.href = data.url
     } catch (error) {
       console.error("Error al procesar el pago:", error)
-      
+
       // Mostrar mensaje de error
       toast({
         title: "Error al procesar el pago",

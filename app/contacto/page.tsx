@@ -1,5 +1,5 @@
 import { PageContactForm } from "@/components/page-contact-form"
-import { MapPin, Phone, Mail, Clock } from "lucide-react"
+import { Phone, Mail, Clock } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function ContactPage() {
@@ -42,13 +42,12 @@ export default function ContactPage() {
                     <p className="text-muted-foreground">Puedes contactarnos a través de los siguientes medios:</p>
                   </div>
 
-                  <div className="space-y-4">                    
-
+                  <div className="space-y-4">
                     <div className="flex items-start gap-3">
                       <Phone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-medium">Teléfono</h4>
-                        <p className="text-muted-foreground">+57 3171165904</p>                        
+                        <p className="text-muted-foreground">+57 3171165904</p>
                       </div>
                     </div>
 
@@ -56,7 +55,7 @@ export default function ContactPage() {
                       <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-medium">Correo electrónico</h4>
-                        <p className="text-muted-foreground">formacionedux@gmail.com</p>                        
+                        <p className="text-muted-foreground">formacionedux@gmail.com</p>
                       </div>
                     </div>
 
@@ -73,7 +72,7 @@ export default function ContactPage() {
                   <div className="mt-6">
                     <div className="aspect-video overflow-hidden rounded-lg border">
                       <iframe
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.7226353396795!2d-76.53500518573602!3d3.4516465974934436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e30a6e8e04b7e29%3A0x7e725cc469d15df4!2sCali%2C%20Valle%20del%20Cauca!5e0!3m2!1ses!2sco!4v1712590000000!5m2!1ses!2sco" 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3976.7226353396795!2d-76.53500518573602!3d3.4516465974934436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e30a6e8e04b7e29%3A0x7e725cc469d15df4!2sCali%2C%20Valle%20del%20Cauca!5e0!3m2!1ses!2sco!4v1712590000000!5m2!1ses!2sco"
                         width="100%"
                         height="100%"
                         style={{ border: 0 }}
@@ -146,4 +145,3 @@ export default function ContactPage() {
     </div>
   )
 }
-

@@ -1,40 +1,63 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createPaymentUrl } from "@/lib/payu-sdk"
+import { rateLimit } from "@/lib/rate-limit"
+
+// Configurar limitador de tasa para prevenir abusos
+const limiter = rateLimit({
+  interval: 60 * 1000, // 1 minuto
+  uniqueTokenPerInterval: 10, // Máximo 10 usuarios por intervalo
+})
 
 export async function POST(request: NextRequest) {
   try {
+    // Obtener la IP del cliente para rate limiting
+    const ip = request.headers.get("x-forwarded-for") || "anonymous"
+
+    // Aplicar rate limiting (máximo 5 solicitudes por minuto por IP)
+    try {
+      await limiter.check(5, ip)
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: "Demasiadas solicitudes. Por favor, inténtalo de nuevo más tarde." },
+        { status: 429 },
+      )
+    }
+
     // Obtener datos del cuerpo de la solicitud
     const requestData = await request.json()
+    const { amount, description, buyerInfo, referenceCode } = requestData
 
     // Validar datos requeridos
-    const { referenceCode, description, amount, currency, buyerInfo, responseUrl } = requestData
-
-    if (!referenceCode || !description || !amount || !currency || !buyerInfo) {
-      return NextResponse.json({ success: false, error: "Faltan datos requeridos para crear el pago" }, { status: 400 })
+    if (!amount || !description || !buyerInfo || !buyerInfo.email) {
+      return NextResponse.json(
+        { success: false, error: "Faltan datos requeridos (amount, description, buyerInfo)" },
+        { status: 400 },
+      )
     }
 
     // Crear URL de pago
-    const paymentResponse = await createPaymentUrl({
-      referenceCode,
-      description,
+    const paymentUrlResult = await createPaymentUrl({
       amount,
-      currency,
+      description,
       buyerInfo,
-      responseUrl,
-      notifyUrl: "https://edux.com.co/api/payment/notification",      
+      referenceCode,
     })
 
-    if (!paymentResponse.success) {
-      return NextResponse.json({ success: false, error: paymentResponse.error }, { status: 400 })
+    if (!paymentUrlResult.success) {
+      return NextResponse.json(
+        { success: false, error: paymentUrlResult.error || "Error al crear URL de pago" },
+        { status: 500 },
+      )
     }
 
+    // Devolver la URL de pago y el código de referencia
     return NextResponse.json({
       success: true,
-      url: paymentResponse.url,
-      signature: paymentResponse.signature,
+      paymentUrl: paymentUrlResult.url,
+      referenceCode: paymentUrlResult.referenceCode,
     })
   } catch (error) {
-    console.error("Error al crear pago:", error)
+    console.error("Error al crear URL de pago:", error)
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Error desconocido" },
       { status: 500 },

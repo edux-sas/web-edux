@@ -31,31 +31,39 @@ export async function GET() {
       publicTestMode: payuCredentials.publicTestMode ? "Activado" : "Desactivado",
     }
 
-    // Verificar si las credenciales coinciden entre sí
-    const credentialsMatch = {
-      apiKeyMatchesPublic: payuCredentials.apiKey === payuCredentials.publicApiKey,
-      apiLoginMatchesPublic: payuCredentials.apiLogin === payuCredentials.publicApiLogin,
-      merchantIdMatchesPublic: payuCredentials.merchantId === payuCredentials.publicMerchantId,
-      testModeMatchesPublic: payuCredentials.testMode === payuCredentials.publicTestMode,
+    // Análisis detallado de la API Key para detectar problemas de caracteres
+    const apiKeyAnalysis = {
+      value: payuCredentials.publicApiKey,
+      length: payuCredentials.publicApiKey.length,
+      lastChar: payuCredentials.publicApiKey.slice(-1),
+      lastCharCode: payuCredentials.publicApiKey.slice(-1).charCodeAt(0),
+      charCodes: Array.from(payuCredentials.publicApiKey).map((char) => char.charCodeAt(0)),
+      base64: Buffer.from(payuCredentials.publicApiKey).toString("base64"),
     }
 
-    // Verificar si hay algún problema con las credenciales
-    const hasCredentialIssues =
-      !payuCredentials.publicApiKey ||
-      !payuCredentials.publicApiLogin ||
-      !payuCredentials.publicMerchantId ||
-      !credentialsMatch.apiKeyMatchesPublic ||
-      !credentialsMatch.apiLoginMatchesPublic ||
-      !credentialsMatch.merchantIdMatchesPublic
+    // Verificar si las credenciales coinciden con las esperadas
+    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I" // Actualizado con la API Key correcta
+    const expectedApiLogin = "oO7dIsaFObz7118" // Actualizado con el API Login correcto
+    const expectedMerchantId = "1031879" // Actualizado con el Merchant ID correcto
+
+    const credentialsMatch = {
+      apiKey: payuCredentials.apiKey === expectedApiKey,
+      apiLogin: payuCredentials.apiLogin === expectedApiLogin,
+      merchantId: payuCredentials.merchantId === expectedMerchantId,
+
+      // Coincidencia de variables públicas
+      publicApiKey: payuCredentials.publicApiKey === expectedApiKey,
+      publicApiLogin: payuCredentials.publicApiLogin === expectedApiLogin,
+      publicMerchantId: payuCredentials.publicMerchantId === expectedMerchantId,
+    }
 
     return NextResponse.json({
-      status: hasCredentialIssues ? "warning" : "success",
-      message: hasCredentialIssues
-        ? "Hay problemas con las credenciales de PayU"
-        : "Verificación de credenciales de PayU exitosa",
+      status: "success",
+      message: "Verificación de credenciales de PayU",
       credentialsStatus,
+      apiKeyAnalysis,
       credentialsMatch,
-      apiUrl: payuCredentials.publicTestMode
+      apiUrl: payuCredentials.testMode
         ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
         : "https://api.payulatam.com/payments-api/4.0/service.cgi",
     })

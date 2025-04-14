@@ -102,7 +102,7 @@ export default function LoginPage() {
                   <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
                 </Button>
               </div>
-            </div>            
+            </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -115,7 +115,7 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-4">          
+        <CardFooter className="flex flex-col space-y-4">
           <div className="text-sm text-center mt-4">
             ¿No tienes una cuenta?{" "}
             <Link href="/registro" className="text-primary hover:underline">
@@ -127,4 +127,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

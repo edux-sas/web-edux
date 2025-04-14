@@ -14,4 +14,3 @@ export function SupabaseErrorAlert({ error }: SupabaseErrorAlertProps) {
     </Alert>
   )
 }
-

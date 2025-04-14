@@ -21,17 +21,60 @@ export type DiscResult = {
   created_at?: string
 }
 
-// Crear cliente de Supabase
+// Update the way we check for environment variables and create the Supabase admin client
+
+// Donde se definen las variables:
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+// Añade estos logs para depuración
+console.log("Supabase URL:", supabaseUrl ? "Definida" : "No definida")
+console.log(
+  "Supabase Anon Key:",
+  supabaseAnonKey ? "Definida (primeros 10 caracteres): " + supabaseAnonKey.substring(0, 10) + "..." : "No definida",
+)
+console.log(
+  "Supabase Service Key:",
+  supabaseServiceKey
+    ? "Definida (primeros 10 caracteres): " + supabaseServiceKey.substring(0, 10) + "..."
+    : "No definida",
+)
+
+// Create a client of Supabase only if we have a valid URL
+export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
+
+// Reemplaza la inicialización de supabaseAdmin con este código:
+let supabaseAdmin = null
+if (typeof window === "undefined" && supabaseUrl && supabaseServiceKey) {
+  // Solo crear el cliente admin en el servidor
+  try {
+    supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+    console.log("Cliente Supabase Admin creado correctamente en el servidor")
+  } catch (error) {
+    console.error("Error al crear el cliente Supabase Admin:", error)
+  }
+} else if (typeof window !== "undefined") {
+  console.log("No se puede crear supabaseAdmin en el cliente. Las claves de servicio solo deben usarse en el servidor.")
+} else {
+  console.error("No se pudo crear el cliente Supabase Admin: faltan credenciales", {
+    urlDefinida: !!supabaseUrl,
+    serviceKeyDefinida: !!supabaseServiceKey,
+  })
+}
+
+// Export the admin client
+export { supabaseAdmin }
 
 // Verificar si las variables de entorno están definidas
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Supabase URL o Anon Key no están definidas. Por favor, configura las variables de entorno.")
 }
-
-// Crear un cliente de Supabase solo si tenemos una URL válida
-export const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 // Función para registrar un usuario
 export async function signUpUser(email: string, password: string, userData: Omit<User, "id">) {
@@ -300,4 +343,3 @@ export async function getUserData(userId: string) {
     return { success: false, error }
   }
 }
-

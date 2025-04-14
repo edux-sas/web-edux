@@ -9,7 +9,7 @@ export default function ExperienceSection() {
     { name: "Universidad Cooperativa", logo: "/images/logos/unicooperativa.png", width: 180, height: 60 },
     { name: "San Martín", logo: "/images/logos/sanmartin.png", width: 180, height: 60 },
     { name: "UNIMETA", logo: "/images/logos/unimeta.webp", width: 180, height: 60 },
-    { name: "Palacio y Abogados", logo: "/images/logos/palacio.png", width: 180, height: 60 },
+    { name: "Palacio & Abogados", logo: "/images/logos/palacio.png", width: 180, height: 60 },
     { name: "C&SB", logo: "/images/logos/csb.png", width: 180, height: 60 },
     { name: "Cámara de Comercio de Bogotá", logo: "/images/logos/camara-comercio.png", width: 180, height: 60 },
     { name: "Contraloría", logo: "/images/logos/contraloria.png", width: 220, height: 60 },
@@ -88,4 +88,3 @@ export default function ExperienceSection() {
     </section>
   )
 }
-

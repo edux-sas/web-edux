@@ -134,8 +134,8 @@ export default function SIEPage() {
                 <Image
                   src="/images/hologram-education.png"
                   alt="Sistema de Información Educativa"
-                  width={650}
-                  height={500}
+                  width={600}
+                  height={450}
                   className="object-cover transition-transform duration-10000 hover:scale-110"
                   priority
                 />

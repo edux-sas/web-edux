@@ -1,125 +1,129 @@
-/**
- * Cliente SDK de PayU para Next.js con TypeScript
- */
-import axios from "axios"
 import crypto from "crypto"
 
-// Configuración de PayU
-const PAYU_CONFIG = {
-  apiKey: process.env.PAYU_API_KEY || "",
-  apiLogin: process.env.PAYU_API_LOGIN || "",
-  merchantId: process.env.PAYU_MERCHANT_ID || "",
-  accountId: process.env.PAYU_ACCOUNT_ID || "512321", // Reemplaza con tu ID de cuenta
-  isTest: process.env.PAYU_TEST_MODE === "true",
-  language: "es",
-}
-
 // Tipos para la integración con PayU
-export type PayUPaymentRequest = {
-  referenceCode: string
-  description: string
-  amount: number
-  currency: string
-  buyerInfo: {
-    name: string
-    email: string
-    phone: string
-    document: string
-    address: string
-    city: string
-    state: string
-    country: string
-    postalCode: string
+export type PayUTransaction = {
+  order: {
+    accountId: string
+    referenceCode: string
+    description: string
+    language: string
+    signature: string
+    notifyUrl: string
+    additionalValues: {
+      TX_VALUE: {
+        value: number
+        currency: string
+      }
+      TX_TAX?: {
+        value: number
+        currency: string
+      }
+      TX_TAX_RETURN_BASE?: {
+        value: number
+        currency: string
+      }
+    }
+    buyer: {
+      merchantBuyerId?: string
+      fullName: string
+      emailAddress: string
+      contactPhone: string
+      dniNumber: string
+      shippingAddress: {
+        street1: string
+        street2?: string
+        city: string
+        state: string
+        country: string
+        postalCode: string
+        phone: string
+      }
+    }
   }
+  payer: {
+    merchantPayerId?: string
+    fullName: string
+    emailAddress: string
+    contactPhone: string
+    dniNumber: string
+    billingAddress: {
+      street1: string
+      street2?: string
+      city: string
+      state: string
+      country: string
+      postalCode: string
+      phone: string
+    }
+  }
+  creditCard?: {
+    number: string
+    securityCode: string
+    expirationDate: string
+    name: string
+  }
+  extraParameters?: Record<string, string>
+  type: string
   paymentMethod: string
-  installments?: number
-  responseUrl?: string
-  notifyUrl?: string
+  paymentCountry: string
+  deviceSessionId: string
+  ipAddress: string
+  cookie: string
+  userAgent: string
 }
 
-export type PayUPaymentResponse = {
-  success: boolean
-  url?: string
-  orderId?: string
-  transactionId?: string
-  state?: string
-  responseCode?: string
-  responseMessage?: string
-  error?: string
-  signature?: string
+export type PayURequest = {
+  language: string
+  command: string
+  merchant: {
+    apiKey: string
+    apiLogin: string
+  }
+  transaction: PayUTransaction
+  test: boolean
 }
 
-export type PayUNotification = {
-  merchant_id: string
-  state_pol: string
-  risk: string
-  response_code_pol: string
-  reference_sale: string
-  reference_pol: string
-  sign: string
-  extra1?: string
-  extra2?: string
-  payment_method: string
-  payment_method_type: string
-  installments_number: string
-  value: string
-  tax: string
-  additional_value: string
-  transaction_date: string
-  currency: string
-  email_buyer: string
-  cus?: string
-  pse_bank?: string
-  test?: string
-  description: string
-  billing_address?: string
-  shipping_address?: string
-  phone?: string
-  office_phone?: string
-  account_number_ach?: string
-  account_type_ach?: string
-  administrative_fee?: string
-  administrative_fee_base?: string
-  administrative_fee_tax?: string
-  airline_code?: string
-  attempts?: string
-  authorization_code?: string
-  bank_id?: string
-  billing_city?: string
-  billing_country?: string
-  commision_pol?: string
-  commision_pol_currency?: string
-  customer_number?: string
-  date?: string
-  error_code_bank?: string
-  error_message_bank?: string
-  exchange_rate?: string
-  ip?: string
-  nickname_buyer?: string
-  nickname_seller?: string
-  payment_method_id?: string
-  payment_request_state?: string
-  pseReference1?: string
-  pseReference2?: string
-  pseReference3?: string
-  response_message_pol?: string
-  shipping_city?: string
-  shipping_country?: string
-  transaction_bank_id?: string
-  transaction_id?: string
-  payment_method_name?: string
+export type PayUResponse = {
+  code: string
+  error: string | null
+  transactionResponse: {
+    orderId?: number
+    transactionId?: string
+    state: string
+    paymentNetworkResponseCode?: string | null
+    paymentNetworkResponseErrorMessage?: string | null
+    trazabilityCode?: string
+    authorizationCode?: string | null
+    pendingReason?: string | null
+    responseCode: string
+    errorCode?: string | null
+    responseMessage?: string | null
+    transactionDate?: string | null
+    transactionTime?: string | null
+    operationDate?: number
+    extraParameters?: Record<string, string>
+    additionalInfo?: {
+      paymentNetwork?: string
+      rejectionType?: string
+      responseNetworkMessage?: string | null
+      cardType?: string | null
+      transactionType?: string
+    }
+  }
 }
 
-/**
- * Genera la firma para PayU
- */
-export function generateSignature(referenceCode: string, amount: number, currency: string): string {
-  // Limpiar todos los valores para evitar problemas con espacios o caracteres especiales
-  const cleanApiKey = PAYU_CONFIG.apiKey.trim()
-  const cleanMerchantId = PAYU_CONFIG.merchantId.trim()
+// Función para generar la firma de PayU
+export function generatePayUSignature(
+  apiKey: string,
+  merchantId: string,
+  referenceCode: string,
+  amount: number,
+  currency: string,
+): string {
+  // Asegurar que el referenceCode no tenga espacios al inicio o final
   const cleanReferenceCode = referenceCode.trim()
 
-  // Formatear el monto según la moneda
+  // Para COP, PayU espera valores enteros sin decimales
   let formattedAmount: string
   if (currency === "COP") {
     formattedAmount = Math.round(amount).toString()
@@ -128,7 +132,7 @@ export function generateSignature(referenceCode: string, amount: number, currenc
   }
 
   // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${cleanApiKey}~${cleanMerchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
+  const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
 
   console.log("String para firma PayU:", signatureString)
 
@@ -139,29 +143,56 @@ export function generateSignature(referenceCode: string, amount: number, currenc
   return signature
 }
 
-/**
- * Valida la firma de una notificación de PayU
- */
-export function validateSignature(notification: PayUNotification): boolean {
+// Función para validar la firma de PayU
+export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
-  if (!notification || !notification.sign) {
+  if (!notificationData || !notificationData.signature || !apiKey) {
     return false
   }
 
   // La firma recibida en la notificación
-  const receivedSignature = notification.sign
+  const receivedSignature = notificationData.signature
 
   try {
-    // Formatear el valor según la moneda
-    let formattedValue: string
-    if (notification.currency === "COP") {
-      formattedValue = Math.round(Number.parseFloat(notification.value)).toString()
-    } else {
-      formattedValue = Number.parseFloat(notification.value).toFixed(2)
-    }
+    // Diferentes formatos de firma según el tipo de notificación
+    let signatureString = ""
 
-    // El formato estándar es: apiKey~merchantId~referenceCode~valor~moneda~estado
-    const signatureString = `${PAYU_CONFIG.apiKey}~${notification.merchant_id}~${notification.reference_sale}~${formattedValue}~${notification.currency}~${notification.state_pol}`
+    // Para notificaciones estándar de PayU
+    if (
+      notificationData.reference_sale &&
+      notificationData.value &&
+      notificationData.currency &&
+      notificationData.state_pol
+    ) {
+      // Formatear el valor según la moneda
+      let formattedValue: string
+      if (notificationData.currency === "COP") {
+        formattedValue = Math.round(Number.parseFloat(notificationData.value)).toString()
+      } else {
+        formattedValue = Number.parseFloat(notificationData.value).toFixed(2)
+      }
+
+      // El formato estándar es: apiKey~merchantId~referenceCode~valor~moneda~estado
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
+    }
+    // Para notificaciones de confirmación de transacción
+    else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
+      // Formatear el monto según la moneda
+      let formattedAmount: string
+      if (notificationData.currency === "COP") {
+        formattedAmount = Math.round(Number.parseFloat(notificationData.amount)).toString()
+      } else {
+        formattedAmount = Number.parseFloat(notificationData.amount).toFixed(2)
+      }
+
+      // Otro formato común
+      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
+    }
+    // Si no reconocemos el formato, fallamos por seguridad
+    else {
+      console.error("Formato de notificación desconocido", notificationData)
+      return false
+    }
 
     console.log("String para validación de firma PayU:", signatureString)
 
@@ -179,88 +210,14 @@ export function validateSignature(notification: PayUNotification): boolean {
   }
 }
 
-/**
- * Crea una URL de pago de PayU (Web Checkout)
- */
-export async function createPaymentUrl(paymentData: PayUPaymentRequest): Promise<PayUPaymentResponse> {
-  try {
-    // Validar configuración
-    if (!PAYU_CONFIG.apiKey || !PAYU_CONFIG.apiLogin || !PAYU_CONFIG.merchantId) {
-      throw new Error("Configuración de PayU incompleta. Verifica tus credenciales.")
-    }
-
-    // Generar firma
-    const signature = generateSignature(paymentData.referenceCode, paymentData.amount, paymentData.currency)
-
-    // Calcular valores de impuestos (19% para Colombia)
-    const taxBase = Math.round(paymentData.amount / 1.19)
-    const taxValue = paymentData.amount - taxBase
-
-    // Determinar URL de la API
-    const apiUrl = PAYU_CONFIG.isTest
-      ? "https://sandbox.checkout.payulatam.com/ppp-web-gateway-payu/"
-      : "https://checkout.payulatam.com/ppp-web-gateway-payu/"
-
-    // Construir los parámetros para el formulario de PayU
-    const params = new URLSearchParams()
-    params.append("merchantId", PAYU_CONFIG.merchantId)
-    params.append("accountId", PAYU_CONFIG.accountId)
-    params.append("description", paymentData.description)
-    params.append("referenceCode", paymentData.referenceCode)
-    params.append("amount", paymentData.amount.toString())
-    params.append("tax", taxValue.toString())
-    params.append("taxReturnBase", taxBase.toString())
-    params.append("currency", paymentData.currency)
-    params.append("signature", signature)
-    params.append("test", PAYU_CONFIG.isTest ? "1" : "0")
-    params.append("buyerEmail", paymentData.buyerInfo.email)
-    params.append("buyerFullName", paymentData.buyerInfo.name)
-    params.append("telephone", paymentData.buyerInfo.phone)
-    params.append("shippingAddress", paymentData.buyerInfo.address)
-    params.append("shippingCity", paymentData.buyerInfo.city)
-    params.append("shippingCountry", paymentData.buyerInfo.country)
-
-    // Añadir URLs de respuesta y notificación si se proporcionan
-    if (paymentData.responseUrl) {
-      params.append("responseUrl", paymentData.responseUrl)
-    }
-
-    if (paymentData.notifyUrl) {
-      params.append("confirmationUrl", paymentData.notifyUrl)
-    } else {
-      // URL de notificación por defecto
-      params.append("confirmationUrl", "https://edux.com.co/api/payment/notification")
-    }
-
-    // Construir la URL completa
-    const paymentUrl = `${apiUrl}?${params.toString()}`
-
-    return {
-      success: true,
-      url: paymentUrl,
-      signature: signature,
-    }
-  } catch (error) {
-    console.error("Error al crear URL de pago con PayU:", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al crear URL de pago",
-    }
-  }
-}
-
-/**
- * Procesa un pago con tarjeta de crédito utilizando la API de PayU
- */
-export async function processPayment(paymentData: {
+// Función para procesar pagos con tarjeta
+export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
   cardExpiry: string
   cardCvc: string
   amount: number
-  referenceCode: string
-  description: string
-  currency: string
+  referenceCode?: string
   buyerInfo: {
     name: string
     email: string
@@ -272,63 +229,103 @@ export async function processPayment(paymentData: {
     country: string
     postalCode: string
   }
-}): Promise<PayUPaymentResponse> {
+}): Promise<PayUResponse> {
   try {
-    // Validar configuración
-    if (!PAYU_CONFIG.apiKey || !PAYU_CONFIG.apiLogin || !PAYU_CONFIG.merchantId) {
-      throw new Error("Configuración de PayU incompleta. Verifica tus credenciales.")
+    // Configuración de PayU - Usar las variables de entorno públicas
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin || !merchantId) {
+      console.error("Credenciales de PayU no configuradas correctamente:", {
+        apiKey: apiKey ? "Definido" : "No definido",
+        apiLogin: apiLogin ? "Definido" : "No definido",
+        merchantId: merchantId ? "Definido" : "No definido",
+      })
+
+      return {
+        code: "ERROR",
+        error: "Credenciales de PayU no configuradas correctamente. Contacta al administrador.",
+        transactionResponse: {
+          state: "ERROR",
+          responseMessage: "Credenciales de PayU no configuradas",
+          responseCode: "ERROR",
+        },
+      }
     }
 
-    // Calcular valores de impuestos
-    const taxBase = Math.round(paymentData.amount / 1.19)
-    const taxValue = paymentData.amount - taxBase
-
-    // Formatear fecha de expiración (MM/YY a YYYY/MM)
-    const [month, year] = paymentData.cardExpiry.split("/")
-    const formattedExpiry = `20${year}/${month}`
-
-    // Generar firma
-    const signature = generateSignature(paymentData.referenceCode, paymentData.amount, paymentData.currency)
-
-    // Determinar URL de la API
-    const apiUrl = PAYU_CONFIG.isTest
+    // URL de la API de PayU (sandbox o producción)
+    const apiUrl = isTestMode
       ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
       : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-    // Generar deviceSessionId
+    // Usar el código de referencia proporcionado o generar uno nuevo
+    let referenceCode = paymentData.referenceCode || `EDUX${Date.now()}${Math.floor(Math.random() * 1000)}`
+    referenceCode = referenceCode.trim().replace(/[^a-zA-Z0-9]/g, "")
+
+    // Generar firma usando la API Key
+    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
+
+    // Formatear fecha de expiración (MM/YYYY a YYYY/MM)
+    const [month, year] = paymentData.cardExpiry.split("/")
+    const formattedExpiry = `20${year}/${month}`
+
+    // Determinar el tipo de tarjeta basado en el primer dígito
+    const cardFirstDigit = paymentData.cardNumber.charAt(0)
+    let paymentMethod = "VISA" // Por defecto
+
+    if (cardFirstDigit === "4") {
+      paymentMethod = "VISA"
+    } else if (cardFirstDigit === "5") {
+      paymentMethod = "MASTERCARD"
+    } else if (cardFirstDigit === "3") {
+      paymentMethod = "AMEX"
+    } else if (cardFirstDigit === "6") {
+      paymentMethod = "DINERS"
+    }
+
+    // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
+    const taxBase = Math.round(paymentData.amount / 1.19)
+    const taxValue = paymentData.amount - taxBase
+
+    // Generar deviceSessionId según la documentación de PayU
+    const timestamp = Date.now().toString()
+    const randomValue = Math.random().toString(36).substring(2, 15)
     const deviceSessionId = crypto
       .createHash("md5")
-      .update(Date.now().toString() + Math.random().toString(36).substring(2, 15))
+      .update(timestamp + randomValue)
       .digest("hex")
 
     // Construir la solicitud para PayU
-    const payuRequest = {
-      language: PAYU_CONFIG.language,
+    const payuRequest: PayURequest = {
+      language: "es",
       command: "SUBMIT_TRANSACTION",
       merchant: {
-        apiKey: PAYU_CONFIG.apiKey,
-        apiLogin: PAYU_CONFIG.apiLogin,
+        apiKey,
+        apiLogin,
       },
       transaction: {
         order: {
-          accountId: PAYU_CONFIG.accountId,
-          referenceCode: paymentData.referenceCode,
-          description: paymentData.description,
-          language: PAYU_CONFIG.language,
-          signature: signature,
+          accountId: merchantId,
+          referenceCode,
+          description: "Pago eduX - Tarjeta de crédito",
+          language: "es",
+          signature,
           notifyUrl: "https://edux.com.co/api/payment/notification",
           additionalValues: {
             TX_VALUE: {
-              value: Math.round(paymentData.amount),
-              currency: paymentData.currency,
+              value: paymentData.amount,
+              currency: "COP",
             },
             TX_TAX: {
-              value: taxValue,
-              currency: paymentData.currency,
+              value: taxValue, // IVA ya incluido en el precio
+              currency: "COP",
             },
             TX_TAX_RETURN_BASE: {
-              value: taxBase,
-              currency: paymentData.currency,
+              value: taxBase, // Base gravable
+              currency: "COP",
             },
           },
           buyer: {
@@ -361,41 +358,54 @@ export async function processPayment(paymentData: {
           },
         },
         creditCard: {
-          number: paymentData.cardNumber.replace(/\s+/g, ""),
+          number: paymentData.cardNumber,
           securityCode: paymentData.cardCvc,
           expirationDate: formattedExpiry,
           name: paymentData.cardName,
         },
         extraParameters: {
-          INSTALLMENTS_NUMBER: "1",
+          INSTALLMENTS_NUMBER: "1", // Número de cuotas
         },
         type: "AUTHORIZATION_AND_CAPTURE",
-        paymentMethod: "VISA", // Determinar dinámicamente según el número de tarjeta
+        paymentMethod,
         paymentCountry: "CO",
-        deviceSessionId: deviceSessionId,
-        ipAddress: "127.0.0.1",
-        cookie: crypto.randomBytes(16).toString("hex"),
-        userAgent: "Mozilla/5.0",
+        deviceSessionId, // Usar el deviceSessionId generado según la documentación
+        ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
+        cookie: crypto.randomBytes(16).toString("hex"), // Generamos una cookie aleatoria
+        userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
       },
-      test: PAYU_CONFIG.isTest,
+      test: isTestMode,
     }
 
     console.log("Enviando solicitud a PayU:", {
       url: apiUrl,
-      referenceCode: paymentData.referenceCode,
-      signature,
-      amount: paymentData.amount,
+      apiKey: apiKey ? "Definido" : "No definido",
+      apiLogin: apiLogin ? "Definido" : "No definido",
+      merchantId: merchantId ? "Definido" : "No definido",
+      isTestMode,
+      referenceCode,
+      deviceSessionId,
     })
 
     // Enviar la solicitud a PayU
-    const response = await axios.post(apiUrl, payuRequest, {
+    const response = await fetch(apiUrl, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
+      body: JSON.stringify(payuRequest),
     })
 
-    const data = response.data
+    if (!response.ok) {
+      console.error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
+      const errorText = await response.text()
+      console.error("Respuesta de error completa:", errorText)
+
+      throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
 
     // Verificar que la respuesta tenga la estructura esperada
     if (!data || !data.code) {
@@ -403,85 +413,211 @@ export async function processPayment(paymentData: {
       throw new Error("Respuesta de pago inválida. Por favor, intenta nuevamente.")
     }
 
-    if (data.code === "SUCCESS") {
+    // Si hay un error en la respuesta de PayU, formatearlo adecuadamente
+    if (data.code !== "SUCCESS") {
+      const errorMessage =
+        data.error ||
+        (data.transactionResponse && data.transactionResponse.responseMessage) ||
+        "Error en el procesamiento del pago"
+      console.error("Error en respuesta de PayU:", errorMessage, data)
+
+      // Asegurar que la respuesta tenga una estructura consistente incluso en caso de error
       return {
-        success: true,
-        orderId: data.transactionResponse?.orderId,
-        transactionId: data.transactionResponse?.transactionId,
-        state: data.transactionResponse?.state,
-        responseCode: data.transactionResponse?.responseCode,
-        responseMessage: data.transactionResponse?.responseMessage,
-      }
-    } else {
-      return {
-        success: false,
-        error: data.error || "Error desconocido en el procesamiento del pago",
+        code: data.code,
+        error: errorMessage,
+        transactionResponse: data.transactionResponse || {
+          state: "DECLINED",
+          responseMessage: errorMessage,
+          responseCode: "ERROR",
+        },
       }
     }
+
+    return data
   } catch (error) {
-    console.error("Error al procesar pago con PayU:", error)
+    console.error("Error al procesar el pago con PayU:", error)
+
+    // Devolver un objeto con estructura consistente en caso de error
     return {
-      success: false,
-      error: error instanceof Error ? error.message : "Error desconocido al procesar el pago",
+      code: "ERROR",
+      error: error instanceof Error ? error.message : "Error desconocido en el procesamiento del pago",
+      transactionResponse: {
+        state: "ERROR",
+        responseMessage: error instanceof Error ? error.message : "Error desconocido",
+        responseCode: "SYSTEM_ERROR",
+      },
     }
   }
 }
 
-/**
- * Procesa una notificación de pago de PayU
- */
-export function processPaymentNotification(notificationData: PayUNotification): {
+// Función para probar la conexión con PayU
+export async function testPayUConnection(): Promise<{
   success: boolean
-  isApproved: boolean
-  referenceCode: string
-  transactionId?: string
   message: string
-} {
+  data?: any
+  error?: string
+}> {
   try {
-    // Validar la firma de la notificación
-    const isValidSignature = validateSignature(notificationData)
+    // Obtener las credenciales de PayU
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
-    if (!isValidSignature) {
-      console.error("Firma inválida en notificación de PayU:", notificationData)
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin || !merchantId) {
       return {
         success: false,
-        isApproved: false,
-        referenceCode: notificationData.reference_sale,
-        message: "Firma inválida en la notificación",
+        message: "Credenciales de PayU no configuradas correctamente",
+        error: "Faltan credenciales de PayU",
       }
     }
 
-    // Verificar el estado de la transacción
-    // 4 = APPROVED, 6 = DECLINED, 5 = EXPIRED, 7 = PENDING
-    const isApproved = notificationData.state_pol === "4"
-    const isPending = notificationData.state_pol === "7"
-    const isDeclined = notificationData.state_pol === "6" || notificationData.state_pol === "5"
+    // URL de la API de PayU (sandbox o producción)
+    const apiUrl = isTestMode
+      ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
+      : "https://api.payulatam.com/payments-api/4.0/service.cgi"
 
-    let message = ""
-    if (isApproved) {
-      message = "Pago aprobado"
-    } else if (isPending) {
-      message = "Pago pendiente"
-    } else if (isDeclined) {
-      message = "Pago rechazado"
-    } else {
-      message = `Estado desconocido: ${notificationData.state_pol}`
+    // Crear una solicitud simple para probar la conexión (GET_PAYMENT_METHODS)
+    const payuRequest = {
+      language: "es",
+      command: "GET_PAYMENT_METHODS",
+      merchant: {
+        apiKey,
+        apiLogin,
+      },
+      test: isTestMode,
     }
+
+    // Enviar la solicitud a PayU
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payuRequest),
+    })
+
+    // Verificar la respuesta
+    if (!response.ok) {
+      const errorText = await response.text()
+      return {
+        success: false,
+        message: `Error en la respuesta de PayU: ${response.status} ${response.statusText}`,
+        error: errorText,
+      }
+    }
+
+    // Procesar la respuesta
+    const data = await response.json()
 
     return {
       success: true,
-      isApproved,
-      referenceCode: notificationData.reference_sale,
-      transactionId: notificationData.transaction_id,
-      message,
+      message: "Conexión con PayU establecida correctamente",
+      data,
     }
   } catch (error) {
-    console.error("Error al procesar notificación de PayU:", error)
+    console.error("Error al probar la conexión con PayU:", error)
     return {
       success: false,
-      isApproved: false,
-      referenceCode: notificationData.reference_sale || "unknown",
-      message: error instanceof Error ? error.message : "Error desconocido al procesar la notificación",
+      message: "Error al probar la conexión con PayU",
+      error: error instanceof Error ? error.message : "Error desconocido",
+    }
+  }
+}
+
+// Función para crear una URL de pago de PayU para redirección
+export async function createPaymentUrl(paymentData: {
+  amount: number
+  referenceCode?: string
+  description: string
+  buyerInfo: {
+    name: string
+    email: string
+    phone: string
+    document: string
+    address: string
+    city: string
+    state: string
+    country: string
+    postalCode: string
+  }
+}): Promise<{ success: boolean; url?: string; error?: string; referenceCode?: string }> {
+  try {
+    // Configuración de PayU - Usar las variables de entorno públicas
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+    const accountId = process.env.PAYU_ACCOUNT_ID || merchantId // Usar merchantId como fallback
+
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin || !merchantId) {
+      console.error("Credenciales de PayU no configuradas correctamente:", {
+        apiKey: apiKey ? "Definido" : "No definido",
+        apiLogin: apiLogin ? "Definido" : "No definido",
+        merchantId: merchantId ? "Definido" : "No definido",
+      })
+
+      return {
+        success: false,
+        error: "Credenciales de PayU no configuradas correctamente. Contacta al administrador.",
+      }
+    }
+
+    // URL base de PayU (sandbox o producción)
+    const baseUrl = isTestMode
+      ? "https://sandbox.checkout.payulatam.com/ppp-web-gateway-payu"
+      : "https://checkout.payulatam.com/ppp-web-gateway-payu"
+
+    // Usar el código de referencia proporcionado o generar uno nuevo
+    let referenceCode = paymentData.referenceCode || `EDUX${Date.now()}${Math.floor(Math.random() * 1000)}`
+    referenceCode = referenceCode.trim().replace(/[^a-zA-Z0-9]/g, "")
+
+    // Generar firma usando la API Key
+    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
+
+    // Construir los parámetros de la URL
+    const params = new URLSearchParams({
+      merchantId,
+      accountId: accountId.toString(),
+      description: paymentData.description,
+      referenceCode,
+      amount: paymentData.amount.toString(),
+      tax: "0",
+      taxReturnBase: "0",
+      currency: "COP",
+      signature,
+      test: isTestMode ? "1" : "0",
+      buyerEmail: paymentData.buyerInfo.email,
+      responseUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://edux.com.co"}/payment/response`,
+      confirmationUrl: `${process.env.NEXT_PUBLIC_APP_URL || "https://edux.com.co"}/api/payment/notification`,
+    })
+
+    // Añadir información del comprador si está disponible
+    if (paymentData.buyerInfo) {
+      if (paymentData.buyerInfo.name) params.append("buyerFullName", paymentData.buyerInfo.name)
+      if (paymentData.buyerInfo.phone) params.append("telephone", paymentData.buyerInfo.phone)
+      if (paymentData.buyerInfo.document) params.append("documentId", paymentData.buyerInfo.document)
+      if (paymentData.buyerInfo.address) params.append("shippingAddress", paymentData.buyerInfo.address)
+      if (paymentData.buyerInfo.city) params.append("shippingCity", paymentData.buyerInfo.city)
+      if (paymentData.buyerInfo.country) params.append("shippingCountry", paymentData.buyerInfo.country)
+    }
+
+    // Construir la URL completa
+    const paymentUrl = `${baseUrl}?${params.toString()}`
+
+    return {
+      success: true,
+      url: paymentUrl,
+      referenceCode,
+    }
+  } catch (error) {
+    console.error("Error al crear URL de pago con PayU:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al crear URL de pago",
     }
   }
 }

@@ -169,7 +169,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center">
           <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-            © {currentYear} eduX. Todos los derechos reservados. Hecho con{" "}
+            © {currentYear} eduX Academy. Todos los derechos reservados. Hecho con{" "}
             <a
               href="https://www.v1tr0.com/"
               target="_blank"

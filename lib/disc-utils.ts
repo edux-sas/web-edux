@@ -64,4 +64,3 @@ export function formatTimeRemaining(timeRemaining: {
     return `${timeRemaining.minutes} minuto${timeRemaining.minutes !== 1 ? "s" : ""}`
   }
 }
-

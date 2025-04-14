@@ -73,4 +73,3 @@ export async function registerUserInMoodle(userData: MoodleUserData): Promise<{ 
     }
   }
 }
-

@@ -10,9 +10,9 @@ import { Toaster } from "@/components/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "eduX Academy - Plataforma de Cursos y Test DISC",
-  description: "Academia de cursos académicos y test DISC con informes en tiempo real",
-    generator: 'v0.dev'
+  title: "Impulsa la transformación y lidera en tu segmento",
+  description:
+    "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
 }
 
 export default function RootLayout({
@@ -22,6 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.png" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <Header />
@@ -33,6 +36,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-import './globals.css'

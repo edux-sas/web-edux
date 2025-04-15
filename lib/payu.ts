@@ -467,6 +467,17 @@ export async function processCardPayment(paymentData: {
     console.log("Monto para transacción:", paymentData.amount)
     debugReferenceCode(referenceCode, payuRequest)
 
+    // Imprimir la solicitud completa para depuración (sin datos sensibles)
+    const debugRequest = { ...payuRequest }
+    if (debugRequest.transaction?.creditCard) {
+      debugRequest.transaction.creditCard = {
+        ...debugRequest.transaction.creditCard,
+        number: `${debugRequest.transaction.creditCard.number.substring(0, 6)}******${debugRequest.transaction.creditCard.number.substring(debugRequest.transaction.creditCard.number.length - 4)}`,
+        securityCode: "***",
+      }
+    }
+    console.log("Solicitud completa a PayU (sin datos sensibles):", JSON.stringify(debugRequest, null, 2))
+
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {
       method: "POST",
@@ -477,15 +488,30 @@ export async function processCardPayment(paymentData: {
       body: JSON.stringify(payuRequest),
     })
 
+    // Capturar la respuesta completa para depuración
+    const responseText = await response.text()
+    console.log("Respuesta completa de PayU:", responseText)
+
     if (!response.ok) {
       console.error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
-      const errorText = await response.text()
-      console.error("Respuesta de error completa:", errorText)
+      console.error("Respuesta de error completa:", responseText)
 
-      throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
+      throw new Error(
+        `Error en la respuesta de PayU: ${response.status} ${response.statusText}. Detalles: ${responseText}`,
+      )
     }
 
-    const data = await response.json()
+    // Intentar parsear la respuesta como JSON
+    let data: PayUResponse
+    try {
+      data = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error("Error al parsear la respuesta de PayU como JSON:", parseError)
+      console.error("Respuesta recibida:", responseText)
+      throw new Error(
+        `Error al parsear la respuesta de PayU: ${parseError instanceof Error ? parseError.message : "Error desconocido"}`,
+      )
+    }
 
     // Verificar que la respuesta tenga la estructura esperada
     if (!data || !data.code) {

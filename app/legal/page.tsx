@@ -151,7 +151,7 @@ export default function LegalPage() {
                 En la máxima medida permitida por la ley aplicable, eduX Academy no será responsable por daños
                 indirectos, incidentales, especiales, consecuentes o punitivos, o cualquier pérdida de beneficios o
                 ingresos, ya sea incurrida directa o indirectamente, o cualquier pérdida de datos, uso, buena voluntad,
-                u otras p��rdidas intangibles, resultantes de:
+                u otras pérdidas intangibles, resultantes de:
               </p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Su acceso o uso o incapacidad para acceder o usar el Sitio;</li>

@@ -22,7 +22,7 @@ export function logPaymentEvent(event: PaymentEvent): void {
   }
 
   // Imprimir en consola para monitoreo en tiempo real
-  console.log(`[PAYMENT-EVENT][${event.type}] Evento de pago registrado`)
+  console.log(`[PAYMENT-EVENT][${event.type}] ${JSON.stringify(event.data)}`)
 
   // En producción, aquí podrías implementar lógica adicional:
   // 1. Guardar en base de datos
@@ -32,7 +32,7 @@ export function logPaymentEvent(event: PaymentEvent): void {
   // Ejemplo de alerta para errores críticos
   if (event.type.includes("error") || event.type.includes("invalid")) {
     // Aquí podrías integrar con servicios como Sentry, LogRocket, etc.
-    console.error(`[PAYMENT-ALERT] Error en proceso de pago: ${event.type}`)
+    console.error(`[PAYMENT-ALERT] Error en proceso de pago: ${event.type}`, event.data)
 
     // También podrías enviar una notificación al equipo
     if (process.env.NODE_ENV === "production") {

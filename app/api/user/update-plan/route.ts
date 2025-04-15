@@ -44,8 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Obtener datos del cuerpo de la solicitud
-    const requestData = await request.json()
-    console.log("Datos recibidos para actualizar plan:", JSON.stringify(requestData))
+    const requestData = await request.json()   
 
     const { userId, plan, payment_status, purchase_date, amount, transaction_id } = requestData
 

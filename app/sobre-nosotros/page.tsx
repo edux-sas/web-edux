@@ -86,30 +86,31 @@ export default function AboutUsPage() {
 
   const teamMembers = [
     {
-      name: "Jaime Diego Gutiérrez Aulestia",
+      name: "Jaime Diego Gutiérrez",
       position: "CEO & Fundador",
-      image: "/images/equipo-edux-3.png",
-      description:
-        "Lidera el desarrollo del Sistema Integral Educativo (SIE) con metodología SCRUM, optimizando la gestión educativa. Especialista en educación digital y transformación del aprendizaje.",
-      icon: <Briefcase className="h-5 w-5 text-primary" />,
-    },
-    {
-      name: "Jose Alexis Correa Valencia",
-      position: "Director de Tecnología",
       image: "/images/equipo-edux-2.png",
       description:
-        "Prompt Engineer, Arquitecto de Sistemas e Ingeniero. Especialista en desarrollo FullStack y expansión de mercados con amplia experiencia docente.",
-      icon: <Code className="h-5 w-5 text-primary" />,
+        "Visionario educativo con más de 15 años de experiencia en transformación digital y pedagogía innovadora.",
+      // Ícono actualizado para un perfil ejecutivo
+      icon: <Briefcase className="h-6 w-6 text-primary" />,
     },
     {
-      name: "Carlos Martínez",
-      position: "Director Académico",
+      name: "Diego Varela",
+      position: "Director Tecnológico y Product Owner",
+      image: "/images/equipo-edux-3.png",
+      description:
+        "Experto en desarrollo de software, metodología SCRUM y gestión de proyectos tecnológicos.",
+      icon: <Code className="h-6 w-6 text-primary" />,
+    },
+    {
+      name: "José Alexis Correa",
+      position: "Director de Tecnología",
       image: "/images/equipo-edux-1.png",
       description:
-        "Especialista en diseño curricular y metodologías de evaluación basadas en competencias. Lidera la implementación de programas formativos innovadores.",
-      icon: <GraduationCap className="h-5 w-5 text-primary" />,
+        "Prompt Engineer, Arquitecto de Sistemas. Especialista en desarrollo FullStack.",
+      icon: <Code className="h-6 w-6 text-primary" />,
     },
-  ]
+  ];
 
   const stats = [
     { value: "50,000+", label: "Estudiantes" },

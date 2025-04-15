@@ -142,8 +142,7 @@ export type PayUResponse = {
   }
 }
 
-// Modifiquemos la función generatePayUSignature para asegurar que no haya problemas con el referenceCode
-
+// Función para generar la firma PayU
 export function generatePayUSignature(
   apiKey: string,
   merchantId: string,
@@ -171,23 +170,6 @@ export function generatePayUSignature(
 
   console.log("String para firma PayU:", signatureString)
 
-  // Información detallada para depuración
-  console.log("Análisis de componentes de la firma:")
-  console.log(
-    "- apiKey:",
-    apiKey,
-    "- Longitud:",
-    apiKey.length,
-    "- Último carácter:",
-    apiKey.slice(-1),
-    "- Código ASCII:",
-    apiKey.slice(-1).charCodeAt(0),
-  )
-  console.log("- merchantId:", merchantId)
-  console.log("- referenceCode:", cleanReferenceCode, "- Original:", referenceCode)
-  console.log("- formattedAmount:", formattedAmount)
-  console.log("- currency:", currency)
-
   // Generar el hash MD5
   const signature = crypto.createHash("md5").update(signatureString).digest("hex")
   console.log("Firma generada (MD5):", signature)
@@ -195,7 +177,7 @@ export function generatePayUSignature(
   return signature
 }
 
-// Actualizar la función validatePayUSignature para usar el mismo formato
+// Función para validar la firma de PayU en notificaciones
 export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
   // Si no hay firma o no hay datos, la firma no es válida
   if (!notificationData || !notificationData.signature || !apiKey) {
@@ -262,25 +244,99 @@ export function validatePayUSignature(notificationData: any, apiKey: string): bo
   }
 }
 
-// Añadir esta función de depuración justo antes de la función processCardPayment
+// Función para validar el número de tarjeta usando el algoritmo de Luhn
+export function validateCardNumber(cardNumber: string): boolean {
+  // Eliminar espacios y guiones
+  const cleanNumber = cardNumber.replace(/[\s-]/g, "")
 
-// Función para depurar la consistencia del referenceCode
-function debugReferenceCode(referenceCode: string, payuRequest: any) {
-  console.log("=== DEPURACIÓN DE REFERENCE CODE ===")
-  console.log("referenceCode usado para firma:", referenceCode)
-  console.log("referenceCode en el JSON:", payuRequest.transaction.order.referenceCode)
-  console.log("¿Son idénticos?", referenceCode === payuRequest.transaction.order.referenceCode)
+  // Verificar que solo contenga dígitos y tenga una longitud válida (13-19 dígitos)
+  if (!/^\d{13,19}$/.test(cleanNumber)) {
+    return false
+  }
 
-  // Verificar si hay espacios o caracteres especiales
-  console.log("Longitud del referenceCode:", referenceCode.length)
-  console.log(
-    "Caracteres del referenceCode:",
-    Array.from(referenceCode).map((c) => `'${c}' (${c.charCodeAt(0)})`),
-  )
-  console.log("==============================")
+  // Algoritmo de Luhn (módulo 10)
+  let sum = 0
+  let shouldDouble = false
+
+  // Recorrer el número de derecha a izquierda
+  for (let i = cleanNumber.length - 1; i >= 0; i--) {
+    let digit = Number.parseInt(cleanNumber.charAt(i), 10)
+
+    if (shouldDouble) {
+      digit *= 2
+      if (digit > 9) {
+        digit -= 9
+      }
+    }
+
+    sum += digit
+    shouldDouble = !shouldDouble
+  }
+
+  return sum % 10 === 0
 }
 
-// Función actualizada para procesar pagos con tarjeta
+// Función para obtener tarjetas de prueba según el tipo y resultado deseado
+export function getTestCard(cardType: string, result = "APPROVED"): { number: string; name: string } {
+  const testCards: Record<string, Record<string, { number: string; name: string }>> = {
+    VISA: {
+      APPROVED: { number: "4111111111111111", name: "APPROVED" },
+      PENDING: { number: "4111111111111111", name: "PENDING" },
+      DECLINED: { number: "4111111111111111", name: "REJECTED" },
+    },
+    MASTERCARD: {
+      APPROVED: { number: "5500000000000004", name: "APPROVED" },
+      PENDING: { number: "5500000000000004", name: "PENDING" },
+      DECLINED: { number: "5500000000000004", name: "REJECTED" },
+    },
+    AMEX: {
+      APPROVED: { number: "370000000000002", name: "APPROVED" },
+      PENDING: { number: "370000000000002", name: "PENDING" },
+      DECLINED: { number: "370000000000002", name: "REJECTED" },
+    },
+    DINERS: {
+      APPROVED: { number: "36007777777772", name: "APPROVED" },
+      PENDING: { number: "36007777777772", name: "PENDING" },
+      DECLINED: { number: "36007777777772", name: "REJECTED" },
+    },
+  }
+
+  // Si el tipo de tarjeta no existe, usar VISA por defecto
+  if (!testCards[cardType]) {
+    cardType = "VISA"
+  }
+
+  // Si el resultado no existe, usar APPROVED por defecto
+  if (!testCards[cardType][result]) {
+    result = "APPROVED"
+  }
+
+  return testCards[cardType][result]
+}
+
+// Función para formatear mensajes de error de tarjeta
+export function formatCardErrorMessage(errorMessage: string): string {
+  if (errorMessage.includes("número de la tarjeta de crédito no es válido")) {
+    return "El número de tarjeta ingresado no es válido o no está habilitado para pagos en línea. Por favor, verifica los datos o intenta con otra tarjeta."
+  }
+
+  if (errorMessage.includes("DECLINED") || errorMessage.includes("RECHAZADA")) {
+    return "La transacción ha sido rechazada por el banco emisor. Por favor, contacta a tu banco o intenta con otra tarjeta."
+  }
+
+  if (errorMessage.includes("EXPIRED_CARD") || errorMessage.includes("vencida")) {
+    return "La tarjeta ha expirado. Por favor, utiliza otra tarjeta."
+  }
+
+  if (errorMessage.includes("INSUFFICIENT_FUNDS") || errorMessage.includes("fondos insuficientes")) {
+    return "Fondos insuficientes en la tarjeta. Por favor, verifica tu saldo o utiliza otra tarjeta."
+  }
+
+  // Si no coincide con ninguno de los casos anteriores, devolver el mensaje original
+  return errorMessage
+}
+
+// Función para procesar pagos con tarjeta
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -432,7 +488,7 @@ export async function processCardPayment(paymentData: {
           },
         },
         creditCard: {
-          number: paymentData.cardNumber,
+          number: paymentData.cardNumber, // Asegurarse de que sea el número completo sin enmascarar
           securityCode: paymentData.cardCvc,
           expirationDate: formattedExpiry,
           name: paymentData.cardName,
@@ -465,10 +521,9 @@ export async function processCardPayment(paymentData: {
     // DEPURACIÓN: Imprimir la firma generada
     console.log("Firma generada:", signature)
     console.log("Monto para transacción:", paymentData.amount)
-    debugReferenceCode(referenceCode, payuRequest)
 
     // Imprimir la solicitud completa para depuración (sin datos sensibles)
-    const debugRequest = { ...payuRequest }
+    const debugRequest = JSON.parse(JSON.stringify(payuRequest)) // Copia profunda
     if (debugRequest.transaction?.creditCard) {
       debugRequest.transaction.creditCard = {
         ...debugRequest.transaction.creditCard,
@@ -555,5 +610,3 @@ export async function processCardPayment(paymentData: {
     }
   }
 }
-
-// Las demás funciones se mantienen igual...

@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard } from "lucide-react"
+import { AlertCircle, Loader2, Check, X, ShieldCheck, CreditCard, Info } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
 import { PaymentMethods } from "@/components/payment-methods"
 import { processCardPayment } from "@/lib/payu"
+
+// Importar la función de validación de tarjeta desde payu.ts
+import { validateCardNumber, formatCardErrorMessage } from "@/lib/payu"
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -68,6 +71,7 @@ export default function CheckoutPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [showAdditionalFields, setShowAdditionalFields] = useState(false)
   const [isTestMode, setIsTestMode] = useState(false)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
 
   // Verificar la conexión con Supabase al cargar la página
   useEffect(() => {
@@ -124,7 +128,7 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$3.000",
+      price: "$3000",
       priceCurrency: "COP",
       priceValue: 3000,
     },
@@ -167,10 +171,14 @@ export default function CheckoutPage() {
 
   const handlePaymentMethodChange = (method: string) => {
     setPaymentMethod(method)
+    // Limpiar errores previos al cambiar el método de pago
+    setPaymentError(null)
   }
 
   const handleCardDataChange = (data: any) => {
     setCardData(data)
+    // Limpiar errores previos al cambiar los datos de la tarjeta
+    setPaymentError(null)
   }
 
   const handlePSEDataChange = (data: any) => {
@@ -180,10 +188,13 @@ export default function CheckoutPage() {
   // Verificar si la contraseña cumple con todos los requisitos
   const isPasswordValid = Object.values(passwordValidation).every(Boolean)
 
+  // Función para formatear mensajes de error de tarjeta
+
   // Modificar la función handleSubmit para manejar usuarios autenticados
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setPaymentError(null) // Limpiar errores previos
 
     // Verificar si Supabase está disponible
     if (!supabaseStatus?.connected) {
@@ -202,6 +213,54 @@ export default function CheckoutPage() {
         toast({
           title: "Información incompleta",
           description: "Por favor completa todos los campos de información de contacto.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+    }
+
+    // Validar el número de tarjeta antes de procesar el pago
+    if (paymentMethod === "card") {
+      const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+      if (!validateCardNumber(cleanCardNumber)) {
+        const errorMsg = "El número de tarjeta no es válido. Por favor, verifica los datos ingresados."
+        setPaymentError(errorMsg)
+        toast({
+          title: "Tarjeta inválida",
+          description: errorMsg,
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      // Validar fecha de expiración
+      const [month, year] = cardData.cardExpiry.split("/")
+      const currentYear = new Date().getFullYear() % 100 // Obtener últimos 2 dígitos del año actual
+      const currentMonth = new Date().getMonth() + 1 // Meses son 0-indexados
+
+      if (!month || !year || isNaN(Number.parseInt(month)) || isNaN(Number.parseInt(year))) {
+        const errorMsg = "La fecha de expiración no es válida. Usa el formato MM/AA."
+        setPaymentError(errorMsg)
+        toast({
+          title: "Fecha inválida",
+          description: errorMsg,
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      const expMonth = Number.parseInt(month)
+      const expYear = Number.parseInt(year)
+
+      if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
+        const errorMsg = "La tarjeta ha expirado. Por favor, utiliza otra tarjeta."
+        setPaymentError(errorMsg)
+        toast({
+          title: "Tarjeta expirada",
+          description: errorMsg,
           variant: "destructive",
         })
         setLoading(false)
@@ -301,7 +360,25 @@ export default function CheckoutPage() {
           paymentResponse?.transactionResponse?.responseMessage ||
           paymentResponse?.error ||
           "Error en el procesamiento del pago. Por favor, intenta nuevamente."
-        throw new Error(errorMessage)
+
+        // Formatear el mensaje de error para que sea más amigable
+        const formattedErrorMessage = formatCardErrorMessage(errorMessage)
+
+        // Guardar el error para mostrarlo en la interfaz
+        setPaymentError(formattedErrorMessage)
+
+        // Registrar información detallada para depuración
+        console.error("Detalles del error de pago:", {
+          code: paymentResponse?.code,
+          state: paymentResponse?.transactionResponse?.state,
+          responseCode: paymentResponse?.transactionResponse?.responseCode,
+          responseMessage: paymentResponse?.transactionResponse?.responseMessage,
+          paymentNetworkResponseCode: paymentResponse?.transactionResponse?.paymentNetworkResponseCode,
+          paymentNetworkResponseErrorMessage: paymentResponse?.transactionResponse?.paymentNetworkResponseErrorMessage,
+          error: paymentResponse?.error,
+        })
+
+        throw new Error(formattedErrorMessage)
       }
 
       // Fecha actual para el registro de la compra
@@ -499,7 +576,8 @@ export default function CheckoutPage() {
       supabaseStatus?.connected === true &&
       (paymentMethod === "card"
         ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-        : false) // PSE está oculto
+        : false) && // PSE está oculto
+      !paymentError // Añadir validación para errores de pago
     : formData.email &&
       formData.name &&
       formData.password &&
@@ -509,7 +587,8 @@ export default function CheckoutPage() {
       (paymentMethod === "card"
         ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
         : false) && // PSE está oculto
-      (!showAdditionalFields || (formData.phone && formData.document && formData.address))
+      (!showAdditionalFields || (formData.phone && formData.document && formData.address)) &&
+      !paymentError // Añadir validación para errores de pago
 
   // Componente para mostrar el estado de validación de la contraseña
   const PasswordRequirement = ({ met, text }: { met: boolean; text: string }) => (
@@ -540,6 +619,27 @@ export default function CheckoutPage() {
                   Por favor, contacta al administrador para verificar la configuración de Supabase.
                 </p>
               </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alerta para modo de prueba */}
+          {isTestMode && (
+            <Alert className="mb-6 bg-amber-50 border-amber-200">
+              <Info className="h-4 w-4 text-amber-500" />
+              <AlertTitle className="text-amber-700">Modo de prueba activo</AlertTitle>
+              <AlertDescription className="text-amber-600">
+                El sistema está en modo de prueba. Usa tarjetas de prueba proporcionadas por PayU para realizar pagos de
+                prueba.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Mostrar error de pago si existe */}
+          {paymentError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error en el procesamiento del pago</AlertTitle>
+              <AlertDescription>{paymentError}</AlertDescription>
             </Alert>
           )}
 
@@ -711,6 +811,30 @@ export default function CheckoutPage() {
                           onPSEDataChange={handlePSEDataChange}
                           disabled={!supabaseStatus?.connected}
                         />
+
+                        {/* Información sobre tarjetas aceptadas */}
+                        {paymentMethod === "card" && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
+                            <p className="text-blue-700 flex items-start">
+                              <Info className="h-4 w-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <span>
+                                Aceptamos tarjetas Visa, Mastercard, American Express y Diners Club. Asegúrate de que tu
+                                tarjeta esté habilitada para compras en línea.
+                              </span>
+                            </p>
+                            {isTestMode && (
+                              <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-700">
+                                <p className="font-medium">Modo de prueba activo - Usa estas tarjetas:</p>
+                                <ul className="mt-1 space-y-1 text-xs">
+                                  <li>• VISA (aprobada): 4111111111111111</li>
+                                  <li>• MASTERCARD (aprobada): 5500000000000004</li>
+                                  <li>• AMEX (aprobada): 370000000000002</li>
+                                  <li>• Para rechazos, usa el nombre "REJECTED" en la tarjeta</li>
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Términos y condiciones */}

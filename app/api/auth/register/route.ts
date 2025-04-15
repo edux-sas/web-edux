@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { createMoodleUser } from "@/lib/moodle" // Import the createMoodleUser function
+import { createMoodleUser } from "@/lib/moodle" // Importar desde el wrapper
 
 // Crear un cliente de Supabase con la clave de servicio para operaciones administrativas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
@@ -25,12 +25,12 @@ try {
         persistSession: false,
       },
     })
-    console.log("Cliente Supabase creado correctamente")
+    console.log("Cliente Supabase Admin creado correctamente para registro")
   } else {
-    console.error("No se pudo crear el cliente Supabase: faltan credenciales")
+    console.error("No se pudo crear el cliente Supabase Admin: faltan credenciales")
   }
 } catch (error) {
-  console.error("Error al crear el cliente Supabase:", error)
+  console.error("Error al crear el cliente Supabase Admin:", error)
 }
 
 export async function POST(request: NextRequest) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Obtener datos del cuerpo de la solicitud
     const requestData = await request.json()
-    console.log("Recibidos datos de registro de usuario")
+    console.log("Datos recibidos para registro:", JSON.stringify(requestData))
 
     const { email, password, userData } = requestData
 
@@ -77,15 +77,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Registrar el usuario en auth con privilegios de servicio
+    console.log("Creando usuario en Supabase Auth...")
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Auto-confirmar el email
-      user_metadata: userData, // Guardar todos los datos en los metadatos
+      user_metadata: userData,
     })
 
     if (authError) {
-      console.error("Error al crear usuario:", authError)
+      console.error("Error al crear usuario en Auth:", authError)
       return NextResponse.json({ success: false, error: authError.message }, { status: 400 })
     }
 
@@ -93,8 +94,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "No se pudo crear el usuario" }, { status: 400 })
     }
 
+    console.log(`✅ Usuario creado en Auth con ID: ${authData.user.id}`)
+
+    // Fecha actual para el registro
+    const currentDate = new Date().toISOString()
+
     // 2. Insertar datos del usuario en la tabla users
-    // IMPORTANTE: Solo incluir campos que existen en la tabla users
+    // Asegurarse de que los campos coincidan exactamente con la estructura de la tabla
+    console.log("Insertando datos en la tabla users...")
     const { error: insertError } = await supabaseAdmin
       .schema("api")
       .from("users")
@@ -109,16 +116,52 @@ export async function POST(request: NextRequest) {
           amount: userData.amount,
           transaction_id: userData.transaction_id,
           reference_code: userData.reference_code,
-          has_completed_disc: false, // Inicialmente, el usuario no ha completado el test DISC
+          has_completed_disc: false,
+          last_payment_update: currentDate,
+          // Campos opcionales que podrían ser útiles
+          user_metadata: userData, // Guardar todos los datos del usuario como JSON
+          last_login: currentDate,
+          // Si hay un plan_expiry_date en userData, usarlo, de lo contrario null
+          plan_expiry_date: userData.plan_expiry_date || null,
         },
       ])
 
     if (insertError) {
-      console.error("Error al insertar usuario en la tabla:", insertError)
+      console.error("Error al insertar usuario en la tabla users:", insertError)
       return NextResponse.json({ success: false, error: insertError.message }, { status: 400 })
     }
 
-    // 3. Registrar usuario en Moodle si está habilitado
+    console.log(`✅ Datos insertados en la tabla users para el usuario ${authData.user.id}`)
+
+    // 3. Registrar la transacción de pago
+    console.log("Registrando transacción de pago...")
+    const { error: transactionError } = await supabaseAdmin
+      .schema("api")
+      .from("payment_transactions")
+      .insert([
+        {
+          user_id: authData.user.id,
+          transaction_id: userData.transaction_id,
+          reference_code: userData.reference_code,
+          amount: userData.amount,
+          currency: userData.currency || "COP", // Valor por defecto
+          payment_method: userData.payment_method || "card", // Valor por defecto
+          payment_status: userData.payment_status,
+          payment_response: userData.payment_response || {}, // Respuesta completa del procesador de pagos
+          created_at: currentDate,
+          updated_at: currentDate,
+        },
+      ])
+
+    if (transactionError) {
+      console.error("Error al registrar transacción de pago:", transactionError)
+      // No fallamos todo el proceso si falla el registro de la transacción
+      // pero lo registramos para depuración
+    } else {
+      console.log(`✅ Transacción de pago registrada para el usuario ${authData.user.id}`)
+    }
+
+    // 4. Registrar usuario en Moodle si está habilitado
     let moodleResult = { success: true, message: "Integración con Moodle desactivada" }
     let moodleUsername = null // Variable para almacenar el nombre de usuario de Moodle
     let enrollmentResults = null // Variable para almacenar los resultados de inscripción
@@ -147,7 +190,6 @@ export async function POST(request: NextRequest) {
           firstname,
           lastname,
           email,
-          // No es necesario especificar categoryid aquí, ya que ahora siempre inscribimos en la categoría 2
         })
 
         if (!moodleResponse.success) {
@@ -156,7 +198,6 @@ export async function POST(request: NextRequest) {
             success: false,
             message: `Usuario creado en Supabase pero falló en Moodle: ${moodleResponse.error}`,
           }
-          // Opcionalmente, puedes decidir si quieres fallar todo el proceso o solo registrar el error
         } else {
           moodleUsername = moodleResponse.username // Guardar el nombre de usuario de Moodle
 
@@ -168,7 +209,7 @@ export async function POST(request: NextRequest) {
 
           moodleResult = {
             success: true,
-            message: `Usuario creado correctamente en Supabase y Moodle e inscrito en ${moodleResponse.data?.successfulEnrollments || 0} cursos de Formación DISC`,
+            message: `Usuario creado correctamente en Supabase y Moodle e inscrito en cursos de Formación DISC`,
             enrollments: enrollmentResults,
           }
 
@@ -183,7 +224,7 @@ export async function POST(request: NextRequest) {
 
           // Actualizar el usuario en Supabase con el nombre de usuario de Moodle
           if (moodleUsername) {
-            console.log(`Intentando guardar moodle_username para el usuario`)
+            console.log(`Intentando guardar moodle_username '${moodleUsername}' para el usuario ${authData.user.id}`)
 
             // Actualizar en la tabla users
             const { error: updateError } = await supabaseAdmin
@@ -194,23 +235,8 @@ export async function POST(request: NextRequest) {
 
             if (updateError) {
               console.error("Error al actualizar moodle_username en la tabla users:", updateError)
-              console.error("Detalles del error:", JSON.stringify(updateError, null, 2))
             } else {
               console.log(`✅ Moodle username '${moodleUsername}' guardado en la tabla users`)
-
-              // Verificar que se guardó correctamente
-              const { data: userData, error: getUserError } = await supabaseAdmin
-                .schema("api")
-                .from("users")
-                .select("moodle_username")
-                .eq("id", authData.user.id)
-                .single()
-
-              if (getUserError) {
-                console.error("Error al verificar moodle_username:", getUserError)
-              } else {
-                console.log("Verificación de moodle_username completada")
-              }
             }
 
             // También actualizar los metadatos del usuario
@@ -220,9 +246,8 @@ export async function POST(request: NextRequest) {
 
             if (metadataError) {
               console.error("Error al actualizar metadatos del usuario:", metadataError)
-              console.error("Detalles del error:", JSON.stringify(metadataError, null, 2))
             } else {
-              console.log("✅ Moodle username guardado en los metadatos del usuario")
+              console.log(`✅ Moodle username '${moodleUsername}' guardado en los metadatos del usuario`)
             }
           }
         }

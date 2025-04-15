@@ -12,7 +12,8 @@ export type MoodleUserData = {
   email: string
   city?: string
   country?: string
-  courseid?: number
+  courseid?: number // ID del curso para inscripción automática
+  categoryid?: number // ID de la categoría para inscripción automática en todos los cursos
 }
 
 type MoodleResponse<T> = {
@@ -25,7 +26,7 @@ type MoodleResponse<T> = {
 /**
  * Inscribe a un usuario en un curso específico
  */
-export async function enrollUserInCourse(userId: number, courseId: number): Promise<any> {
+export async function enrollUserInCourse(userId: number, courseId: number): Promise<MoodleResponse<any>> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -95,7 +96,7 @@ export async function enrollUserInCourse(userId: number, courseId: number): Prom
 /**
  * Obtiene los cursos de una categoría específica
  */
-export async function getCoursesByCategory(categoryId: number): Promise<any> {
+export async function getCoursesByCategory(categoryId: number): Promise<MoodleResponse<any>> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -170,7 +171,7 @@ export async function getCoursesByCategory(categoryId: number): Promise<any> {
 /**
  * Inscribe a un usuario en todos los cursos de una categoría
  */
-export async function enrollUserInCategoryCourses(userId: number, categoryId: number): Promise<any> {
+export async function enrollUserInCategoryCourses(userId: number, categoryId: number): Promise<MoodleResponse<any>> {
   try {
     console.log(`Iniciando inscripción del usuario ${userId} en cursos de la categoría ${categoryId}...`)
 
@@ -248,7 +249,7 @@ export async function enrollUserInCategoryCourses(userId: number, categoryId: nu
 /**
  * Crea un usuario en Moodle a través de la API Web Services
  */
-export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
+export async function createMoodleUser(userData: MoodleUserData): Promise<MoodleResponse<any>> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -315,7 +316,32 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
       await enrollUserInCourse(userId, userData.courseid)
     } else {
       // Inscribir en todos los cursos de la categoría 2 (Formación DISC)
-      await enrollUserInCategoryCourses(userId, 2)
+      const enrollmentResult = await enrollUserInCategoryCourses(userId, 2)
+
+      if (enrollmentResult.success) {
+        console.log(`✅ Usuario inscrito en cursos de la categoría 2 correctamente`)
+        return {
+          success: true,
+          data: {
+            ...result,
+            enrollments: enrollmentResult.data?.enrollments,
+            successfulEnrollments: enrollmentResult.data?.successfulEnrollments,
+          },
+          username: userData.username,
+        }
+      } else {
+        console.error(`❌ Error al inscribir usuario en cursos: ${enrollmentResult.error}`)
+        // Aún consideramos exitosa la creación del usuario aunque falle la inscripción
+        return {
+          success: true,
+          data: {
+            ...result,
+            enrollmentError: enrollmentResult.error,
+          },
+          username: userData.username,
+          error: `Usuario creado pero no se pudo inscribir en cursos: ${enrollmentResult.error}`,
+        }
+      }
     }
 
     return {
@@ -366,7 +392,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
 /**
  * Obtiene información de un usuario de Moodle por su email
  */
-export async function getMoodleUserByEmail(email: string): Promise<any> {
+export async function getMoodleUserByEmail(email: string): Promise<MoodleResponse<any>> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -434,7 +460,7 @@ export async function getMoodleUserByEmail(email: string): Promise<any> {
 /**
  * Verifica la conexión con Moodle y devuelve información del sitio
  */
-export async function testMoodleConnection(): Promise<any> {
+export async function testMoodleConnection(): Promise<MoodleResponse<any>> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {

@@ -28,4 +28,3 @@ export async function createMoodleUser(
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
-

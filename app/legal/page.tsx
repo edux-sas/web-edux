@@ -63,9 +63,9 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">1. Introducción</h3>
               <p>
-                Bienvenido a eduX Academy. Estos Términos y Condiciones rigen el uso de nuestro sitio web ubicado en
+                Bienvenido a eduX. Estos Términos y Condiciones rigen el uso de nuestro sitio web ubicado en
                 www.edux.com.co (en adelante, "el Sitio") y todos los servicios relacionados proporcionados por eduX
-                Academy (en adelante, "nosotros", "nuestro" o "eduX").
+                (en adelante, "nosotros", "nuestro" o "eduX").
               </p>
               <p>
                 Al acceder o utilizar nuestro Sitio, usted acepta estar legalmente obligado por estos Términos y
@@ -97,7 +97,7 @@ export default function LegalPage() {
               <p>
                 3.1. <strong>Contenido del Sitio:</strong> Todo el contenido, características y funcionalidad de nuestro
                 Sitio, incluyendo, pero no limitado a, texto, gráficos, logotipos, iconos, imágenes, clips de audio,
-                descargas digitales, compilaciones de datos y software, son propiedad de eduX Academy o de nuestros
+                descargas digitales, compilaciones de datos y software, son propiedad de eduX  o de nuestros
                 proveedores de contenido y están protegidos por leyes de derechos de autor, marcas registradas y otras
                 leyes de propiedad intelectual.
               </p>
@@ -110,7 +110,7 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">4. Cursos y Servicios</h3>
               <p>
-                4.1. <strong>Descripción de los cursos:</strong> eduX Academy ofrece diversos cursos y servicios
+                4.1. <strong>Descripción de los cursos:</strong> eduX  ofrece diversos cursos y servicios
                 educativos. Nos esforzamos por proporcionar descripciones precisas de nuestros cursos, pero no
                 garantizamos que todas las descripciones sean exactas, completas, confiables, actuales o libres de
                 errores.
@@ -131,7 +131,7 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">5. Test DISC</h3>
               <p>
-                5.1. <strong>Propósito:</strong> El test DISC proporcionado por eduX Academy es una herramienta de
+                5.1. <strong>Propósito:</strong> El test DISC proporcionado por eduX  es una herramienta de
                 evaluación de comportamiento diseñada para fines educativos y de desarrollo personal.
               </p>
               <p>
@@ -148,7 +148,7 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">6. Limitación de Responsabilidad</h3>
               <p>
-                En la máxima medida permitida por la ley aplicable, eduX Academy no será responsable por daños
+                En la máxima medida permitida por la ley aplicable, eduX  no será responsable por daños
                 indirectos, incidentales, especiales, consecuentes o punitivos, o cualquier pérdida de beneficios o
                 ingresos, ya sea incurrida directa o indirectamente, o cualquier pérdida de datos, uso, buena voluntad,
                 u otras pérdidas intangibles, resultantes de:
@@ -194,7 +194,7 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">1. Introducción</h3>
               <p>
-                En eduX Academy, respetamos su privacidad y nos comprometemos a proteger sus datos personales. Esta
+                En eduX , respetamos su privacidad y nos comprometemos a proteger sus datos personales. Esta
                 Política de Privacidad describe cómo recopilamos, utilizamos y compartimos su información cuando visita
                 nuestro sitio web www.edux.com.co o utiliza nuestros servicios.
               </p>
@@ -312,7 +312,7 @@ export default function LegalPage() {
 
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">2. Cómo Utilizamos las Cookies</h3>
-              <p>En eduX Academy, utilizamos cookies para los siguientes propósitos:</p>
+              <p>En eduX , utilizamos cookies para los siguientes propósitos:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>
                   <strong>Cookies esenciales:</strong> Estas cookies son necesarias para el funcionamiento de nuestro
@@ -377,7 +377,7 @@ export default function LegalPage() {
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 px-4">edux_session</td>
-                      <td className="py-2 px-4">eduX Academy</td>
+                      <td className="py-2 px-4">eduX </td>
                       <td className="py-2 px-4">
                         Mantiene el estado de la sesión del usuario a través de las páginas.
                       </td>
@@ -385,7 +385,7 @@ export default function LegalPage() {
                     </tr>
                     <tr className="border-b">
                       <td className="py-2 px-4">edux_preferences</td>
-                      <td className="py-2 px-4">eduX Academy</td>
+                      <td className="py-2 px-4">eduX </td>
                       <td className="py-2 px-4">Almacena las preferencias del usuario, como el tema oscuro/claro.</td>
                       <td className="py-2 px-4">1 año</td>
                     </tr>
@@ -435,7 +435,7 @@ export default function LegalPage() {
             <section className="space-y-4">
               <h3 className="text-xl font-semibold text-foreground">1. Nuestro Compromiso</h3>
               <p>
-                En eduX Academy, nos comprometemos a hacer que nuestro sitio web sea accesible para todos los usuarios,
+                En eduX , nos comprometemos a hacer que nuestro sitio web sea accesible para todos los usuarios,
                 independientemente de sus capacidades o discapacidades. Nuestro objetivo es cumplir con las Pautas de
                 Accesibilidad para el Contenido Web (WCAG) 2.1 nivel AA.
               </p>

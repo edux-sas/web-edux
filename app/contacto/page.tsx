@@ -79,7 +79,7 @@ export default function ContactPage() {
                         allowFullScreen
                         loading="lazy"
                         referrerPolicy="no-referrer-when-downgrade"
-                        title="Mapa de ubicación de eduX Academy"
+                        title="Mapa de ubicación de eduX"
                         className="w-full h-full"
                       ></iframe>
                     </div>

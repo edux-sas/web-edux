@@ -456,7 +456,7 @@ export default function AboutUsPage() {
                 Únete a nuestra comunidad
               </h2>
               <p className="max-w-[900px] text-white/90 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Comienza tu viaje de aprendizaje y desarrollo profesional con eduX Academy.
+                Comienza tu viaje de aprendizaje y desarrollo profesional con eduX.
               </p>
             </div>
             <div className="flex flex-col gap-2 min-[400px]:flex-row">

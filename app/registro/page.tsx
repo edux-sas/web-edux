@@ -20,7 +20,7 @@ export default function RegisterPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Crear una cuenta</CardTitle>
           <CardDescription className="text-center">
-            Para registrarte en eduX Academy, debes adquirir uno de nuestros planes.
+            Para registrarte en eduX, debes adquirir uno de nuestros planes.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center justify-center py-8">

@@ -21,7 +21,7 @@ export async function GET() {
 
     const emailParams = new EmailParams()
       .setFrom("no-reply@edux.com.co")
-      .setFromName("eduX Academy")
+      .setFromName("eduX")
       .setTo(recipients)
       .setSubject("Prueba de conexión con MailerSend")
       .setHtml("<strong>Esta es una prueba de conexión con MailerSend</strong>")

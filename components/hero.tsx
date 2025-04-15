@@ -36,7 +36,7 @@ export default function Hero() {
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <Image
                   src="/images/edux-building-transparent.png"
-                  alt="eduX Academy - Edificio educativo digital"
+                  alt="eduX - Edificio educativo digital"
                   className="object-contain w-full h-full"
                   width={550}
                   height={500}

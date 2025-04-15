@@ -45,7 +45,7 @@ if (!process.env.EMAIL_PASSWORD) {
 
 // Dirección de correo desde la que se enviarán los emails
 const FROM_EMAIL = "soporte@edux.com.co"
-const FROM_NAME = "eduX Academy"
+const FROM_NAME = "eduX"
 
 // Dirección de correo para recibir copias de los formularios
 const ADMIN_EMAIL = "soporte@edux.com.co"
@@ -56,7 +56,7 @@ export async function sendContactConfirmation(name: string, email: string, subje
     const mailOptions = {
       from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
       to: email,
-      subject: "Hemos recibido tu mensaje - eduX Academy",
+      subject: "Hemos recibido tu mensaje - eduX",
       html: `
         <!DOCTYPE html>
         <html lang="es">
@@ -70,7 +70,7 @@ export async function sendContactConfirmation(name: string, email: string, subje
             <!-- Header -->
             <tr>
               <td style="background-color: #0ea5e9; padding: 30px 20px; text-align: center;">
-                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">eduX Academy</h1>
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">eduX </h1>
               </td>
             </tr>
             
@@ -94,14 +94,14 @@ export async function sendContactConfirmation(name: string, email: string, subje
                 
                 <p style="margin-bottom: 10px; line-height: 1.6;">Si tienes alguna pregunta adicional, no dudes en responder a este correo.</p>
                 <p style="margin-bottom: 20px; line-height: 1.6;">Saludos cordiales,</p>
-                <p style="margin-bottom: 10px; line-height: 1.6;"><strong>El equipo de eduX Academy</strong></p>
+                <p style="margin-bottom: 10px; line-height: 1.6;"><strong>El equipo de eduX </strong></p>
               </td>
             </tr>
             
             <!-- Footer -->
             <tr>
               <td style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX Academy. Todos los derechos reservados.</p>
+                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX. Todos los derechos reservados.</p>
                 <p style="margin: 0;">Este es un correo automático, por favor no respondas directamente a este mensaje.</p>
               </td>
             </tr>
@@ -183,7 +183,7 @@ export async function sendAdminNotification(
             <!-- Footer -->
             <tr>
               <td style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #6b7280;">
-                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX Academy. Todos los derechos reservados.</p>
+                <p style="margin: 0 0 10px 0;">© ${new Date().getFullYear()} eduX. Todos los derechos reservados.</p>
                 <p style="margin: 0;">Puedes responder directamente a este correo para contactar al remitente.</p>
               </td>
             </tr>

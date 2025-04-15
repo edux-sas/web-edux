@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   title: "Impulsa la transformación y lidera en tu segmento",
   description:
     "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
+  icons: {
+    icon: [{ url: "/favicon.ico" }, { url: "/favicon.png" }],
+    apple: { url: "/favicon.png" },
+    shortcut: { url: "/favicon.png" },
+  },
 }
 
 export default function RootLayout({
@@ -22,9 +27,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <head>
-        <link rel="icon" href="/favicon.png" />
-      </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
           <Header />

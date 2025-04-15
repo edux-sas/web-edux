@@ -99,7 +99,7 @@ export default function TestDiscPage() {
               <CardTitle>{plan.name}</CardTitle>
               <div className="mt-4">
                 <span className="text-3xl font-bold">{plan.price}</span>
-                {plan.id !== "enterprise" && <span className="text-muted-foreground ml-1">USD</span>}
+                {plan.id !== "enterprise" && <span className="text-muted-foreground ml-1"></span>}
               </div>
               <CardDescription className="mt-2">{plan.description}</CardDescription>
             </CardHeader>

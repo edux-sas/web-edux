@@ -313,7 +313,16 @@ export default function CheckoutPage() {
         NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
       })
 
-      if (paymentMethod === "card") {
+      // Si estamos en modo de prueba y los datos de la tarjeta son válidos, simular una aprobación
+      if (isTestMode && cardData.cardNumber && cardData.cardName && cardData.cardExpiry && cardData.cardCvc) {
+        // Importar la función de simulación
+        const { simulateApprovedPayment } = await import("@/lib/test-mode-utils")
+
+        // Simular una respuesta aprobada
+        paymentResponse = simulateApprovedPayment(referenceCode)
+
+        console.log("MODO PRUEBA: Simulando aprobación de pago", paymentResponse)
+      } else if (paymentMethod === "card") {
         paymentResponse = await processCardPayment({
           cardNumber: cleanCardNumber,
           cardName: cardData.cardName,

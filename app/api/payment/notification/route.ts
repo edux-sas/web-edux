@@ -4,6 +4,9 @@ import { validatePayUSignature } from "@/lib/payu"
 import { createMoodleUser } from "@/lib/moodle-api"
 import { logPaymentEvent } from "@/lib/payment-logger"
 
+// Importar las utilidades de modo de prueba
+import { isTestMode } from "@/lib/test-mode-utils"
+
 // Crear un cliente de Supabase con la clave de servicio para operaciones administrativas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
@@ -48,7 +51,10 @@ export async function POST(request: NextRequest) {
     } = notificationData
 
     // Validar la firma para asegurar que la notificación es legítima
-    const isValidSignature = validatePayUSignature(notificationData, process.env.PAYU_API_KEY || "")
+    // En modo de prueba, omitimos la validación de firma
+    const isValidSignature = isTestMode()
+      ? true
+      : validatePayUSignature(notificationData, process.env.PAYU_API_KEY || "")
 
     if (!isValidSignature) {
       logPaymentEvent({
@@ -61,7 +67,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que el merchant_id coincida con nuestro ID
-    if (merchant_id !== process.env.PAYU_MERCHANT_ID) {
+    // En modo de prueba, aceptamos cualquier merchant_id que venga en la notificación
+    if (!isTestMode() && merchant_id !== process.env.PAYU_MERCHANT_ID) {
       logPaymentEvent({
         type: "notification_invalid_merchant",
         data: { reference: reference_sale, merchant_id },
@@ -84,6 +91,11 @@ export async function POST(request: NextRequest) {
       paymentStatus = "REJECTED" // Rechazado o expirado
     } else if (state_pol === "7") {
       paymentStatus = "PENDING" // Pendiente
+    }
+
+    // En modo de prueba, siempre establecemos el estado como APPROVED
+    if (isTestMode()) {
+      paymentStatus = "APPROVED"
     }
 
     // Buscar el usuario asociado a esta referencia de venta

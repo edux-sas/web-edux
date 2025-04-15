@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import { logPaymentEvent } from "@/lib/payment-logger"
 
+// Al inicio del archivo, importar las utilidades de modo de prueba
+import { isTestMode, simulateApprovedPayment } from "@/lib/test-mode-utils"
+
 // Crear un cliente de Supabase con la clave de servicio para operaciones administrativas
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
@@ -24,13 +27,40 @@ try {
 
 export async function GET(request: NextRequest) {
   try {
-    // Obtener los parámetros de la solicitud
-    const referenceCode = request.nextUrl.searchParams.get("referenceCode") || ""
-    const transactionId = request.nextUrl.searchParams.get("transactionId") || ""
+    // Obtener el ID de transacción de los parámetros de consulta
+    const { searchParams } = new URL(request.url)
+    const transactionId = searchParams.get("transactionId")
+    const referenceCode = searchParams.get("referenceCode")
 
-    if (!referenceCode && !transactionId) {
-      return NextResponse.json({ success: false, error: "Se requiere referenceCode o transactionId" }, { status: 400 })
+    if (!transactionId && !referenceCode) {
+      return NextResponse.json(
+        { error: "Se requiere transactionId o referenceCode para verificar el estado del pago" },
+        { status: 400 },
+      )
     }
+
+    // Si estamos en modo de prueba, simular una respuesta aprobada
+    if (isTestMode()) {
+      const simulatedResponse = simulateApprovedPayment(
+        referenceCode || `REF_${Date.now()}`,
+        transactionId || undefined,
+      )
+
+      return NextResponse.json({
+        success: true,
+        status: "APPROVED",
+        message: "Pago aprobado (SIMULACIÓN)",
+        data: simulatedResponse,
+      })
+    }
+
+    // Obtener los parámetros de la solicitud
+    // const referenceCode = request.nextUrl.searchParams.get("referenceCode") || ""
+    // const transactionId = request.nextUrl.searchParams.get("transactionId") || ""
+
+    // if (!referenceCode && !transactionId) {
+    //   return NextResponse.json({ success: false, error: "Se requiere referenceCode o transactionId" }, { status: 400 })
+    // }
 
     // Verificar si el cliente de Supabase existe
     if (!supabaseAdmin) {

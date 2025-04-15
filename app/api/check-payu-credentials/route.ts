@@ -8,12 +8,15 @@ export async function GET() {
       apiKey: process.env.PAYU_API_KEY || "",
       apiLogin: process.env.PAYU_API_LOGIN || "",
       merchantId: process.env.PAYU_MERCHANT_ID || "",
+      accountId: process.env.PAYU_ACCOUNT_ID || "",
       testMode: process.env.PAYU_TEST_MODE === "true",
 
       // Variables públicas (con prefijo)
       publicApiKey: process.env.NEXT_PUBLIC_PAYU_API_KEY || "",
       publicApiLogin: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "",
       publicMerchantId: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "",
+      publicAccountId: process.env.NEXT_PUBLIC_PAYU_ACCOUNT_ID || "",
+      publicKey: process.env.NEXT_PUBLIC_PAYU_PUBLIC_KEY || "",
       publicTestMode: process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true",
     }
 
@@ -22,12 +25,15 @@ export async function GET() {
       apiKey: payuCredentials.apiKey ? "Definida" : "No definida",
       apiLogin: payuCredentials.apiLogin ? "Definida" : "No definida",
       merchantId: payuCredentials.merchantId ? "Definida" : "No definida",
+      accountId: payuCredentials.accountId ? "Definida" : "No definida",
       testMode: payuCredentials.testMode ? "Activado" : "Desactivado",
 
       // Estado de las variables públicas
       publicApiKey: payuCredentials.publicApiKey ? "Definida" : "No definida",
       publicApiLogin: payuCredentials.publicApiLogin ? "Definida" : "No definida",
       publicMerchantId: payuCredentials.publicMerchantId ? "Definida" : "No definida",
+      publicAccountId: payuCredentials.publicAccountId ? "Definida" : "No definida",
+      publicKey: payuCredentials.publicKey ? "Definida" : "No definida",
       publicTestMode: payuCredentials.publicTestMode ? "Activado" : "Desactivado",
     }
 
@@ -42,19 +48,22 @@ export async function GET() {
     }
 
     // Verificar si las credenciales coinciden con las esperadas
-    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I" // Actualizado con la API Key correcta
-    const expectedApiLogin = "oO7dIsaFObz7118" // Actualizado con el API Login correcto
-    const expectedMerchantId = "1031879" // Actualizado con el Merchant ID correcto
+    const expectedApiKey = "DQr8RmU97c4o41uLR8kpdsYF2I" // API Key correcta
+    const expectedApiLogin = "oO7dIsaFObz7118" // API Login correcto
+    const expectedMerchantId = "1022766" // Merchant ID correcto
+    const expectedAccountId = "1031879" // Account ID correcto
 
     const credentialsMatch = {
       apiKey: payuCredentials.apiKey === expectedApiKey,
       apiLogin: payuCredentials.apiLogin === expectedApiLogin,
       merchantId: payuCredentials.merchantId === expectedMerchantId,
+      accountId: payuCredentials.accountId === expectedAccountId,
 
       // Coincidencia de variables públicas
       publicApiKey: payuCredentials.publicApiKey === expectedApiKey,
       publicApiLogin: payuCredentials.publicApiLogin === expectedApiLogin,
       publicMerchantId: payuCredentials.publicMerchantId === expectedMerchantId,
+      publicAccountId: payuCredentials.publicAccountId === expectedAccountId,
     }
 
     return NextResponse.json({

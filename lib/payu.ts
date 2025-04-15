@@ -306,14 +306,16 @@ export async function processCardPayment(paymentData: {
     const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
     const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
     const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const accountId = process.env.NEXT_PUBLIC_PAYU_ACCOUNT_ID || ""
     const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
     // Verificar que las credenciales estén definidas
-    if (!apiKey || !apiLogin || !merchantId) {
+    if (!apiKey || !apiLogin || !merchantId || !accountId) {
       console.error("Credenciales de PayU no configuradas correctamente:", {
         apiKey: apiKey ? "Definido" : "No definido",
         apiLogin: apiLogin ? "Definido" : "No definido",
         merchantId: merchantId ? "Definido" : "No definido",
+        accountId: accountId ? "Definido" : "No definido",
       })
 
       return {
@@ -380,7 +382,7 @@ export async function processCardPayment(paymentData: {
       },
       transaction: {
         order: {
-          accountId: merchantId,
+          accountId: accountId, // Usar accountId en lugar de merchantId aquí
           referenceCode,
           description: "Pago eduX - Tarjeta de crédito",
           language: "es",
@@ -454,6 +456,7 @@ export async function processCardPayment(paymentData: {
       apiKey: apiKey ? "Definido" : "No definido",
       apiLogin: apiLogin ? "Definido" : "No definido",
       merchantId: merchantId ? "Definido" : "No definido",
+      accountId: accountId ? "Definido" : "No definido",
       isTestMode,
       referenceCode,
       deviceSessionId,

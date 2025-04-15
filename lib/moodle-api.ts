@@ -50,7 +50,7 @@ export async function enrollUserInCourse(userId: number, courseId: number): Prom
     url.searchParams.append("enrolments[0][userid]", userId.toString())
     url.searchParams.append("enrolments[0][courseid]", courseId.toString())
 
-    console.log("URL completa para inscribir usuario en curso:", url.toString())
+    console.log(`Preparando inscripción de usuario ${userId} en curso ${courseId}`)
 
     // Hacer la solicitud GET
     const response = await axios.get(url.toString())
@@ -266,7 +266,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
     // Asegurarse de que el apellido no esté vacío
     const lastname = userData.lastname || "-"
 
-    console.log(`Creando usuario en Moodle: ${userData.username} (${userData.email})...`)
+    console.log("Iniciando creación de usuario en Moodle...")
 
     // Construir la URL con los parámetros como query string
     // Este enfoque funciona mejor con algunas versiones de Moodle
@@ -288,7 +288,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
     url.searchParams.append("users[0][auth]", "manual")
     url.searchParams.append("users[0][lang]", "es")
 
-    console.log("URL completa para crear usuario en Moodle:", url.toString())
+    console.log("Preparando solicitud para crear usuario en Moodle")
 
     // Hacer la solicitud GET en lugar de POST
     // Algunas versiones de Moodle funcionan mejor con GET para esta operación

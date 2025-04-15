@@ -1,350 +1,7 @@
-import crypto from "crypto"
+// Modificar la función processCardPayment para forzar una respuesta exitosa en modo de prueba local
+import type { PayUResponse, PayURequest } from "./payu.types"
+import { generatePayUSignature } from "./payu.utils"
 
-// Tipos para la integración con PayU
-export type PayUTransaction = {
-  order: {
-    accountId: string
-    referenceCode: string
-    description: string
-    language: string
-    signature: string
-    notifyUrl: string
-    additionalValues: {
-      TX_VALUE: {
-        value: number
-        currency: string
-      }
-      TX_TAX?: {
-        value: number
-        currency: string
-      }
-      TX_TAX_RETURN_BASE?: {
-        value: number
-        currency: string
-      }
-    }
-    buyer: {
-      merchantBuyerId?: string
-      fullName: string
-      emailAddress: string
-      contactPhone: string
-      dniNumber: string
-      shippingAddress: {
-        street1: string
-        street2?: string
-        city: string
-        state: string
-        country: string
-        postalCode: string
-        phone: string
-      }
-    }
-    payer: {
-      merchantBuyerId?: string
-      fullName: string
-      emailAddress: string
-      contactPhone: string
-      dniNumber: string
-      billingAddress: {
-        street1: string
-        street2?: string
-        city: string
-        state: string
-        country: string
-        postalCode: string
-        phone: string
-      }
-    }
-    creditCard?: {
-      number: string
-      securityCode: string
-      expirationDate: string
-      name: string
-    }
-    extraParameters?: Record<string, string>
-    type: string
-    paymentMethod: string
-    paymentCountry: string
-    deviceSessionId: string
-    ipAddress: string
-    cookie: string
-    userAgent: string
-  }
-  payer: {
-    merchantPayerId?: string
-    fullName: string
-    emailAddress: string
-    contactPhone: string
-    dniNumber: string
-    billingAddress: {
-      street1: string
-      street2?: string
-      city: string
-      state: string
-      country: string
-      postalCode: string
-      phone: string
-    }
-  }
-  creditCard?: {
-    number: string
-    securityCode: string
-    expirationDate: string
-    name: string
-  }
-  extraParameters?: Record<string, string>
-  type: string
-  paymentMethod: string
-  paymentCountry: string
-  deviceSessionId: string
-  ipAddress: string
-  cookie: string
-  userAgent: string
-}
-
-export type PayURequest = {
-  language: string
-  command: string
-  merchant: {
-    apiKey: string
-    apiLogin: string
-  }
-  transaction: PayUTransaction
-  test: boolean
-}
-
-export type PayUResponse = {
-  code: string
-  error: string | null
-  transactionResponse: {
-    orderId?: number
-    transactionId?: string
-    state: string
-    paymentNetworkResponseCode?: string | null
-    paymentNetworkResponseErrorMessage?: string | null
-    trazabilityCode?: string
-    authorizationCode?: string | null
-    pendingReason?: string | null
-    responseCode: string
-    errorCode?: string | null
-    responseMessage?: string | null
-    transactionDate?: string | null
-    transactionTime?: string | null
-    operationDate?: number
-    extraParameters?: Record<string, string>
-    additionalInfo?: {
-      paymentNetwork?: string
-      rejectionType?: string
-      responseNetworkMessage?: string | null
-      cardType?: string | null
-      transactionType?: string
-    }
-  }
-}
-
-// Función para generar la firma PayU
-export function generatePayUSignature(
-  apiKey: string,
-  merchantId: string,
-  referenceCode: string,
-  amount: number,
-  currency: string,
-): string {
-  // Asegurar que el referenceCode no tenga espacios al inicio o final
-  const cleanReferenceCode = referenceCode.trim()
-
-  // IMPORTANTE: Para COP, PayU espera valores enteros sin decimales
-  // Para otras monedas, puede requerir 2 decimales
-  let formattedAmount: string
-
-  if (currency === "COP") {
-    // Para COP, redondear a entero y convertir a string
-    formattedAmount = Math.round(amount).toString()
-  } else {
-    // Para otras monedas, usar 2 decimales
-    formattedAmount = amount.toFixed(2)
-  }
-
-  // Crear el string para la firma: apiKey~merchantId~referenceCode~amount~currency
-  const signatureString = `${apiKey}~${merchantId}~${cleanReferenceCode}~${formattedAmount}~${currency}`
-
-  console.log("String para firma PayU:", signatureString)
-
-  // Generar el hash MD5
-  const signature = crypto.createHash("md5").update(signatureString).digest("hex")
-  console.log("Firma generada (MD5):", signature)
-
-  return signature
-}
-
-// Función para validar la firma de PayU en notificaciones
-export function validatePayUSignature(notificationData: any, apiKey: string): boolean {
-  // Si no hay firma o no hay datos, la firma no es válida
-  if (!notificationData || !notificationData.signature || !apiKey) {
-    return false
-  }
-
-  // La firma recibida en la notificación
-  const receivedSignature = notificationData.signature
-
-  try {
-    // Diferentes formatos de firma según el tipo de notificación
-    let signatureString = ""
-
-    // Para notificaciones estándar de PayU
-    if (
-      notificationData.reference_sale &&
-      notificationData.value &&
-      notificationData.currency &&
-      notificationData.state_pol
-    ) {
-      // Formatear el valor según la moneda
-      let formattedValue: string
-      if (notificationData.currency === "COP") {
-        formattedValue = Math.round(Number.parseFloat(notificationData.value)).toString()
-      } else {
-        formattedValue = Number.parseFloat(notificationData.value).toFixed(2)
-      }
-
-      // El formato estándar es: apiKey~merchantId~referenceCode~valor~moneda~estado
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_sale}~${formattedValue}~${notificationData.currency}~${notificationData.state_pol}`
-    }
-    // Para notificaciones de confirmación de transacción
-    else if (notificationData.transaction_id && notificationData.reference_code && notificationData.amount) {
-      // Formatear el monto según la moneda
-      let formattedAmount: string
-      if (notificationData.currency === "COP") {
-        formattedAmount = Math.round(Number.parseFloat(notificationData.amount)).toString()
-      } else {
-        formattedAmount = Number.parseFloat(notificationData.amount).toFixed(2)
-      }
-
-      // Otro formato común
-      signatureString = `${apiKey}~${notificationData.merchant_id}~${notificationData.reference_code}~${formattedAmount}~${notificationData.currency}`
-    }
-    // Si no reconocemos el formato, fallamos por seguridad
-    else {
-      console.error("Formato de notificación desconocido", notificationData)
-      return false
-    }
-
-    console.log("String para validación de firma PayU:", signatureString)
-
-    // Generar el hash MD5 del signatureString
-    const calculatedSignature = crypto.createHash("md5").update(signatureString).digest("hex")
-
-    console.log("Firma recibida:", receivedSignature)
-    console.log("Firma calculada:", calculatedSignature)
-
-    // Comparar la firma calculada con la recibida
-    return calculatedSignature === receivedSignature
-  } catch (error) {
-    console.error("Error al validar firma de PayU:", error)
-    return false
-  }
-}
-
-// Función para validar el número de tarjeta usando el algoritmo de Luhn
-export function validateCardNumber(cardNumber: string): boolean {
-  // Eliminar espacios y guiones
-  const cleanNumber = cardNumber.replace(/[\s-]/g, "")
-
-  // Verificar que solo contenga dígitos y tenga una longitud válida (13-19 dígitos)
-  if (!/^\d{13,19}$/.test(cleanNumber)) {
-    return false
-  }
-
-  // Algoritmo de Luhn (módulo 10)
-  let sum = 0
-  let shouldDouble = false
-
-  // Recorrer el número de derecha a izquierda
-  for (let i = cleanNumber.length - 1; i >= 0; i--) {
-    let digit = Number.parseInt(cleanNumber.charAt(i), 10)
-
-    if (shouldDouble) {
-      digit *= 2
-      if (digit > 9) {
-        digit -= 9
-      }
-    }
-
-    sum += digit
-    shouldDouble = !shouldDouble
-  }
-
-  return sum % 10 === 0
-}
-
-// Función para obtener tarjetas de prueba según el tipo y resultado deseado
-export function getTestCard(cardType: string, result = "APPROVED"): { number: string; name: string } {
-  const testCards: Record<string, Record<string, { number: string; name: string }>> = {
-    VISA: {
-      APPROVED: { number: "4111111111111111", name: "APPROVED" },
-      PENDING: { number: "4111111111111111", name: "PENDING" },
-      DECLINED: { number: "4111111111111111", name: "REJECTED" },
-      // Añadir tarjetas específicas para errores internos
-      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "4111111111111111", name: "INTERNAL_ERROR" },
-    },
-    MASTERCARD: {
-      APPROVED: { number: "5500000000000004", name: "APPROVED" },
-      PENDING: { number: "5500000000000004", name: "PENDING" },
-      DECLINED: { number: "5500000000000004", name: "REJECTED" },
-      // Añadir tarjetas específicas para errores internos
-      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "5500000000000004", name: "INTERNAL_ERROR" },
-    },
-    AMEX: {
-      APPROVED: { number: "370000000000002", name: "APPROVED" },
-      PENDING: { number: "370000000000002", name: "PENDING" },
-      DECLINED: { number: "370000000000002", name: "REJECTED" },
-      // Añadir tarjetas específicas para errores internos
-      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "370000000000002", name: "INTERNAL_ERROR" },
-    },
-    DINERS: {
-      APPROVED: { number: "36007777777772", name: "APPROVED" },
-      PENDING: { number: "36007777777772", name: "PENDING" },
-      DECLINED: { number: "36007777777772", name: "REJECTED" },
-      // Añadir tarjetas específicas para errores internos
-      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "36007777777772", name: "INTERNAL_ERROR" },
-    },
-  }
-
-  // Si el tipo de tarjeta no existe, usar VISA por defecto
-  if (!testCards[cardType]) {
-    cardType = "VISA"
-  }
-
-  // Si el resultado no existe, usar APPROVED por defecto
-  if (!testCards[cardType][result]) {
-    result = "APPROVED"
-  }
-
-  return testCards[cardType][result]
-}
-
-// Función para formatear mensajes de error de tarjeta
-export function formatCardErrorMessage(errorMessage: string): string {
-  if (errorMessage.includes("número de la tarjeta de crédito no es válido")) {
-    return "El número de tarjeta ingresado no es válido o no está habilitado para pagos en línea. Por favor, verifica los datos o intenta con otra tarjeta."
-  }
-
-  if (errorMessage.includes("DECLINED") || errorMessage.includes("RECHAZADA")) {
-    return "La transacción ha sido rechazada por el banco emisor. Por favor, contacta a tu banco o intenta con otra tarjeta."
-  }
-
-  if (errorMessage.includes("EXPIRED_CARD") || errorMessage.includes("vencida")) {
-    return "La tarjeta ha expirado. Por favor, utiliza otra tarjeta."
-  }
-
-  if (errorMessage.includes("INSUFFICIENT_FUNDS") || errorMessage.includes("fondos insuficientes")) {
-    return "Fondos insuficientes en la tarjeta. Por favor, verifica tu saldo o utiliza otra tarjeta."
-  }
-
-  // Si no coincide con ninguno de los casos anteriores, devolver el mensaje original
-  return errorMessage
-}
-
-// Función para procesar pagos con tarjeta
 export async function processCardPayment(paymentData: {
   cardNumber: string
   cardName: string
@@ -369,6 +26,108 @@ export async function processCardPayment(paymentData: {
     // Configuración de PayU - Usar las variables de entorno públicas
     const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
 
+    // NUEVA FUNCIONALIDAD: Detectar si estamos en localhost
+    const isLocalhost =
+      typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+
+    // Si estamos en modo de prueba y en localhost, simular respuestas según el nombre de la tarjeta
+    if (isTestMode && isLocalhost) {
+      console.log("Ejecutando en localhost en modo de prueba - simulando respuesta de PayU")
+
+      // Simular diferentes respuestas basadas en el nombre de la tarjeta
+      if (paymentData.cardName.toUpperCase().includes("REJECTED")) {
+        return {
+          code: "SUCCESS",
+          error: null,
+          transactionResponse: {
+            orderId: Math.floor(Math.random() * 1000000000),
+            transactionId: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+            state: "DECLINED",
+            responseCode: "DECLINED",
+            responseMessage: "Transacción rechazada por reglas del comercio",
+            operationDate: Date.now(),
+            extraParameters: {},
+            additionalInfo: {
+              paymentNetwork: "VISA",
+              rejectionType: "SOFT_DECLINE",
+              responseNetworkMessage: null,
+              cardType: "CREDIT",
+              transactionType: "AUTHORIZATION_AND_CAPTURE",
+            },
+          },
+        }
+      } else if (paymentData.cardName.toUpperCase().includes("PENDING")) {
+        return {
+          code: "SUCCESS",
+          error: null,
+          transactionResponse: {
+            orderId: Math.floor(Math.random() * 1000000000),
+            transactionId: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+            state: "PENDING",
+            responseCode: "PENDING_TRANSACTION_CONFIRMATION",
+            responseMessage: "Transacción pendiente de confirmación",
+            operationDate: Date.now(),
+            extraParameters: {},
+            additionalInfo: {
+              paymentNetwork: "VISA",
+              rejectionType: null,
+              responseNetworkMessage: null,
+              cardType: "CREDIT",
+              transactionType: "AUTHORIZATION_AND_CAPTURE",
+            },
+          },
+        }
+      } else if (paymentData.cardName.toUpperCase().includes("ERROR")) {
+        return {
+          code: "SUCCESS",
+          error: null,
+          transactionResponse: {
+            orderId: Math.floor(Math.random() * 1000000000),
+            transactionId: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+            state: "DECLINED",
+            responseCode: "INTERNAL_PAYMENT_PROVIDER_ERROR",
+            responseMessage: "Error interno del proveedor de pagos",
+            operationDate: Date.now(),
+            extraParameters: {},
+            additionalInfo: {
+              paymentNetwork: "VISA",
+              rejectionType: "SOFT_DECLINE",
+              responseNetworkMessage: null,
+              cardType: "CREDIT",
+              transactionType: "AUTHORIZATION_AND_CAPTURE",
+            },
+          },
+        }
+      } else {
+        // Por defecto, simular una transacción exitosa
+        return {
+          code: "SUCCESS",
+          error: null,
+          transactionResponse: {
+            orderId: Math.floor(Math.random() * 1000000000),
+            transactionId: `sim-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+            state: "APPROVED",
+            paymentNetworkResponseCode: "00",
+            trazabilityCode: `sim-${Date.now()}`,
+            authorizationCode: `AUTH-${Math.floor(Math.random() * 1000000)}`,
+            responseCode: "APPROVED",
+            responseMessage: "Transacción aprobada",
+            operationDate: Date.now(),
+            extraParameters: {},
+            additionalInfo: {
+              paymentNetwork: "VISA",
+              rejectionType: null,
+              responseNetworkMessage: null,
+              cardType: "CREDIT",
+              transactionType: "AUTHORIZATION_AND_CAPTURE",
+            },
+          },
+        }
+      }
+    }
+
+    // Continuar con el código original para entornos no locales o no de prueba
     // Usar credenciales específicas para modo de prueba o producción
     let apiKey, apiLogin, merchantId, accountId
 
@@ -530,19 +289,10 @@ export async function processCardPayment(paymentData: {
       test: isTestMode,
     }
 
-    console.log("Enviando solicitud a PayU:", {
-      url: apiUrl,
-      apiKey: apiKey ? "Definido" : "No definido",
-      apiLogin: apiLogin ? "Definido" : "No definido",
-      merchantId: merchantId ? "Definido" : "No definido",
-      accountId: accountId ? "Definido" : "No definido",
-      isTestMode,
-      referenceCode,
-      deviceSessionId,
-    })
+    console.log("Enviando solicitud a PayU", isTestMode ? "(modo prueba)" : "(modo producción)")
 
     // DEPURACIÓN: Imprimir la firma generada
-    console.log("Firma generada:", signature)
+    console.log("Firma generada para transacción")
     console.log("Monto para transacción:", paymentData.amount)
 
     // Imprimir la solicitud completa para depuración (sin datos sensibles)
@@ -554,7 +304,7 @@ export async function processCardPayment(paymentData: {
         securityCode: "***",
       }
     }
-    console.log("Solicitud completa a PayU (sin datos sensibles):", JSON.stringify(debugRequest, null, 2))
+    console.log("Enviando solicitud a PayU")
 
     // Enviar la solicitud a PayU
     const response = await fetch(apiUrl, {
@@ -568,7 +318,7 @@ export async function processCardPayment(paymentData: {
 
     // Capturar la respuesta completa para depuración
     const responseText = await response.text()
-    console.log("Respuesta completa de PayU:", responseText)
+    console.log("Recibida respuesta de PayU")
 
     if (!response.ok) {
       console.error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)

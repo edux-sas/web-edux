@@ -284,12 +284,13 @@ export default function CheckoutPage() {
       const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
 
       // Imprimir las credenciales que se están usando para depuración
-      console.log("Credenciales PayU que se están usando:", {
-        NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
-        NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "No definido",
-        NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "No definido",
-        NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
-      })
+      // console.log("Credenciales PayU que se están usando:", {
+      //   NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
+      //   NEXT_PUBLIC_PAYU_API_LOGIN: process.env.NEXT_PUBLIC_PAYU_API_LOGIN || "No definido",
+      //   NEXT_PUBLIC_PAYU_MERCHANT_ID: process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || "No definido",
+      //   NEXT_PUBLIC_PAYU_TEST_MODE: process.env.NEXT_PUBLIC_PAYU_TEST_MODE || "No definido",
+      // })
+      console.log("Verificando configuración de PayU")
 
       if (paymentMethod === "card") {
         // Verificar si estamos en entorno local y en modo de prueba
@@ -431,7 +432,8 @@ export default function CheckoutPage() {
         },
       }
 
-      console.log("Enviando datos de registro:", JSON.stringify(registerData))
+      // console.log("Enviando datos de registro:", JSON.stringify(registerData))
+      console.log("Preparando datos de registro de usuario")
 
       // Verificar las variables de entorno antes de hacer la solicitud
       try {

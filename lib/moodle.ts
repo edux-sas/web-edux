@@ -9,17 +9,12 @@ export async function createMoodleUser(
 ): Promise<{ success: boolean; error?: string; data?: any; username?: string }> {
   try {
     // Añadir log para depuración
-    console.log("Iniciando creación de usuario en Moodle con datos:", {
-      username: userData.username,
-      firstname: userData.firstname,
-      lastname: userData.lastname || "-",
-      email: userData.email,
-    })
+    console.log("Iniciando creación de usuario en Moodle")
 
     const result = await createMoodleUserAPI(userData)
 
     // Añadir log para depuración
-    console.log("Resultado de createMoodleUserAPI:", JSON.stringify(result, null, 2))
+    console.log("Procesado resultado de createMoodleUserAPI")
 
     // Asegurarnos de que el nombre de usuario se está devolviendo correctamente
     return {
@@ -33,3 +28,4 @@ export async function createMoodleUser(
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
+

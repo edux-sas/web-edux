@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Logear la notificación recibida para monitoreo
     logPaymentEvent({
       type: "notification_received",
-      data: notificationData,
+      data: { reference: notificationData.reference_sale || "N/A", state: notificationData.state_pol || "N/A" },
       timestamp: new Date().toISOString(),
     })
 

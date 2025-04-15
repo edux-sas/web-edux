@@ -40,7 +40,7 @@ export type PayUTransaction = {
       }
     }
     payer: {
-      merchantPayerId?: string
+      merchantBuyerId?: string
       fullName: string
       emailAddress: string
       contactPhone: string
@@ -283,21 +283,29 @@ export function getTestCard(cardType: string, result = "APPROVED"): { number: st
       APPROVED: { number: "4111111111111111", name: "APPROVED" },
       PENDING: { number: "4111111111111111", name: "PENDING" },
       DECLINED: { number: "4111111111111111", name: "REJECTED" },
+      // Añadir tarjetas específicas para errores internos
+      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "4111111111111111", name: "INTERNAL_ERROR" },
     },
     MASTERCARD: {
       APPROVED: { number: "5500000000000004", name: "APPROVED" },
       PENDING: { number: "5500000000000004", name: "PENDING" },
       DECLINED: { number: "5500000000000004", name: "REJECTED" },
+      // Añadir tarjetas específicas para errores internos
+      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "5500000000000004", name: "INTERNAL_ERROR" },
     },
     AMEX: {
       APPROVED: { number: "370000000000002", name: "APPROVED" },
       PENDING: { number: "370000000000002", name: "PENDING" },
       DECLINED: { number: "370000000000002", name: "REJECTED" },
+      // Añadir tarjetas específicas para errores internos
+      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "370000000000002", name: "INTERNAL_ERROR" },
     },
     DINERS: {
       APPROVED: { number: "36007777777772", name: "APPROVED" },
       PENDING: { number: "36007777777772", name: "PENDING" },
       DECLINED: { number: "36007777777772", name: "REJECTED" },
+      // Añadir tarjetas específicas para errores internos
+      INTERNAL_PAYMENT_PROVIDER_ERROR: { number: "36007777777772", name: "INTERNAL_ERROR" },
     },
   }
 
@@ -359,11 +367,26 @@ export async function processCardPayment(paymentData: {
 }): Promise<PayUResponse> {
   try {
     // Configuración de PayU - Usar las variables de entorno públicas
-    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
-    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
-    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
-    const accountId = process.env.NEXT_PUBLIC_PAYU_ACCOUNT_ID || ""
     const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+
+    // Usar credenciales específicas para modo de prueba o producción
+    let apiKey, apiLogin, merchantId, accountId
+
+    if (isTestMode) {
+      // Credenciales para el entorno de pruebas (sandbox)
+      apiKey = "4Vj8eK4rloUd272L48hsrarnUA"
+      apiLogin = "pRRXKOl8ikMmt9u"
+      merchantId = "508029"
+      accountId = "512321"
+      console.log("Usando credenciales de PRUEBA para PayU")
+    } else {
+      // Credenciales para el entorno de producción
+      apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+      apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+      merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+      accountId = process.env.NEXT_PUBLIC_PAYU_ACCOUNT_ID || ""
+      console.log("Usando credenciales de PRODUCCIÓN para PayU")
+    }
 
     // Verificar que las credenciales estén definidas
     if (!apiKey || !apiLogin || !merchantId || !accountId) {

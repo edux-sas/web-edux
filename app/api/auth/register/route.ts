@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       email_confirm: true, // Auto-confirmar el email
-      user_metadata: userData,
+      user_metadata: userData, // Guardar todos los datos en los metadatos
     })
 
     if (authError) {
@@ -94,14 +94,21 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Insertar datos del usuario en la tabla users
-    // Nota: No incluimos moodle_username aquí porque aún no lo tenemos
+    // IMPORTANTE: Solo incluir campos que existen en la tabla users
     const { error: insertError } = await supabaseAdmin
       .schema("api")
       .from("users")
       .insert([
         {
           id: authData.user.id,
-          ...userData,
+          name: userData.name,
+          email: userData.email,
+          plan: userData.plan,
+          payment_status: userData.payment_status,
+          purchase_date: userData.purchase_date,
+          amount: userData.amount,
+          transaction_id: userData.transaction_id,
+          reference_code: userData.reference_code,
           has_completed_disc: false, // Inicialmente, el usuario no ha completado el test DISC
         },
       ])

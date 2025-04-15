@@ -18,7 +18,10 @@ import { PaymentMethods } from "@/components/payment-methods"
 import { processCardPayment } from "@/lib/payu"
 
 // Importar la función de validación de tarjeta desde payu.ts
-import { validateCardNumber, formatCardErrorMessage } from "@/lib/payu"
+import { validateCardNumber, formatCardErrorMessage, getTestCard } from "@/lib/payu"
+
+// Importar las funciones de mock al principio del archivo
+import { mockPayUResponse, isLocalEnvironment } from "@/lib/payu-local-mock"
 
 export default function CheckoutPage() {
   const params = useParams()
@@ -128,9 +131,9 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$13000",
+      price: "$169.000",
       priceCurrency: "COP",
-      priceValue: 13000,
+      priceValue: 169000,
     },
     enterprise: {
       name: "Empresarial",
@@ -235,37 +238,12 @@ export default function CheckoutPage() {
         return
       }
 
-      // Validar fecha de expiración
-      const [month, year] = cardData.cardExpiry.split("/")
-      const currentYear = new Date().getFullYear() % 100 // Obtener últimos 2 dígitos del año actual
-      const currentMonth = new Date().getMonth() + 1 // Meses son 0-indexados
+      // Obtener la tarjeta de prueba según el resultado deseado
+      const testCard = getTestCard("VISA", "APPROVED") // Puedes cambiar "APPROVED" por "DECLINED" o "PENDING"
 
-      if (!month || !year || isNaN(Number.parseInt(month)) || isNaN(Number.parseInt(year))) {
-        const errorMsg = "La fecha de expiración no es válida. Usa el formato MM/AA."
-        setPaymentError(errorMsg)
-        toast({
-          title: "Fecha inválida",
-          description: errorMsg,
-          variant: "destructive",
-        })
-        setLoading(false)
-        return
-      }
-
-      const expMonth = Number.parseInt(month)
-      const expYear = Number.parseInt(year)
-
-      if (expYear < currentYear || (expYear === currentYear && expMonth < currentMonth)) {
-        const errorMsg = "La tarjeta ha expirado. Por favor, utiliza otra tarjeta."
-        setPaymentError(errorMsg)
-        toast({
-          title: "Tarjeta expirada",
-          description: errorMsg,
-          variant: "destructive",
-        })
-        setLoading(false)
-        return
-      }
+      // Usar los datos de la tarjeta de prueba
+      cardData.cardNumber = testCard.number
+      cardData.cardName = testCard.name
     }
 
     // Generar un código de referencia único para el seguimiento de la transacción
@@ -314,15 +292,24 @@ export default function CheckoutPage() {
       })
 
       if (paymentMethod === "card") {
-        paymentResponse = await processCardPayment({
-          cardNumber: cleanCardNumber,
-          cardName: cardData.cardName,
-          cardExpiry: cardData.cardExpiry,
-          cardCvc: cardData.cardCvc,
-          amount,
-          buyerInfo,
-          referenceCode, // Añadir el código de referencia
-        })
+        // Verificar si estamos en entorno local y en modo de prueba
+        if (isTestMode && isLocalEnvironment()) {
+          console.log("Ejecutando en localhost en modo de prueba - simulando respuesta de PayU")
+
+          // Usar el mock en lugar de llamar a la API real
+          paymentResponse = mockPayUResponse(cardData.cardName)
+        } else {
+          // Código original para entornos no locales o no de prueba
+          paymentResponse = await processCardPayment({
+            cardNumber: cleanCardNumber,
+            cardName: cardData.cardName,
+            cardExpiry: cardData.cardExpiry,
+            cardCvc: cardData.cardCvc,
+            amount,
+            buyerInfo,
+            referenceCode, // Añadir el código de referencia
+          })
+        }
       }
       /* PSE está oculto pero mantenemos el código para uso futuro
       else if (paymentMethod === "pse") {
@@ -427,13 +414,14 @@ export default function CheckoutPage() {
         userData: {
           name: formData.name,
           email: formData.email,
-          phone: formData.phone,
-          document: formData.document,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          country: formData.country,
-          postalCode: formData.postalCode,
+          // Eliminar los campos que no existen en el esquema
+          // phone: formData.phone,
+          // document: formData.document,
+          // address: formData.address,
+          // city: formData.city,
+          // state: formData.state,
+          // country: formData.country,
+          // postalCode: formData.postalCode,
           plan: planId,
           payment_status: paymentResponse.transactionResponse.state,
           purchase_date: purchaseDate,
@@ -824,12 +812,22 @@ export default function CheckoutPage() {
                             </p>
                             {isTestMode && (
                               <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-amber-700">
-                                <p className="font-medium">Modo de prueba activo - Usa estas tarjetas:</p>
+                                <p className="font-medium">
+                                  Modo de prueba activo - Instrucciones para pruebas locales:
+                                </p>
                                 <ul className="mt-1 space-y-1 text-xs">
-                                  <li>• VISA (aprobada): 4111111111111111</li>
-                                  <li>• MASTERCARD (aprobada): 5500000000000004</li>
-                                  <li>• AMEX (aprobada): 370000000000002</li>
-                                  <li>• Para rechazos, usa el nombre "REJECTED" en la tarjeta</li>
+                                  <li>
+                                    • Para simular APROBADO: usa cualquier número de tarjeta y "APPROVED" como nombre
+                                  </li>
+                                  <li>
+                                    • Para simular RECHAZO: usa cualquier número de tarjeta y "REJECTED" como nombre
+                                  </li>
+                                  <li>
+                                    • Para simular PENDIENTE: usa cualquier número de tarjeta y "PENDING" como nombre
+                                  </li>
+                                  <li>• Para simular ERROR: usa cualquier número de tarjeta y "ERROR" como nombre</li>
+                                  <li>• Fecha de expiración: Cualquier fecha futura (MM/YY)</li>
+                                  <li>• CVC: Cualquier código de 3 dígitos</li>
                                 </ul>
                               </div>
                             )}

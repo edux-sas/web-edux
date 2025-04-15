@@ -8,12 +8,11 @@ export type MoodleUserData = {
   username: string
   password: string
   firstname: string
-  lastname: string
+  lastname?: string
   email: string
   city?: string
   country?: string
-  courseid?: number // ID del curso para inscripción automática
-  categoryid?: number // ID de la categoría para inscripción automática en todos los cursos
+  courseid?: number
 }
 
 type MoodleResponse<T> = {
@@ -26,7 +25,7 @@ type MoodleResponse<T> = {
 /**
  * Inscribe a un usuario en un curso específico
  */
-export async function enrollUserInCourse(userId: number, courseId: number): Promise<MoodleResponse<any>> {
+export async function enrollUserInCourse(userId: number, courseId: number): Promise<any> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -38,17 +37,23 @@ export async function enrollUserInCourse(userId: number, courseId: number): Prom
 
     console.log(`Inscribiendo usuario ${userId} en curso ${courseId}...`)
 
-    // Usar axios con params en lugar de FormData
-    const response = await axios.post(`${MOODLE_URL}/webservice/rest/server.php`, null, {
-      params: {
-        wstoken: MOODLE_TOKEN,
-        wsfunction: "enrol_manual_enrol_users",
-        moodlewsrestformat: "json",
-        "enrolments[0][roleid]": 5, // 5 = estudiante - Enviamos como número, no como string
-        "enrolments[0][userid]": userId, // Enviamos como número, no como string
-        "enrolments[0][courseid]": courseId, // Enviamos como número, no como string
-      },
-    })
+    // Construir la URL con los parámetros como query string
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+
+    // Añadir parámetros básicos
+    url.searchParams.append("wstoken", MOODLE_TOKEN)
+    url.searchParams.append("wsfunction", "enrol_manual_enrol_users")
+    url.searchParams.append("moodlewsrestformat", "json")
+
+    // Añadir datos de inscripción
+    url.searchParams.append("enrolments[0][roleid]", "5") // 5 = estudiante
+    url.searchParams.append("enrolments[0][userid]", userId.toString())
+    url.searchParams.append("enrolments[0][courseid]", courseId.toString())
+
+    console.log("URL completa para inscribir usuario en curso:", url.toString())
+
+    // Hacer la solicitud GET
+    const response = await axios.get(url.toString())
 
     const result = response.data
 
@@ -90,10 +95,8 @@ export async function enrollUserInCourse(userId: number, courseId: number): Prom
 /**
  * Obtiene los cursos de una categoría específica
  */
-export async function getCoursesByCategory(categoryId: number): Promise<MoodleResponse<any>> {
+export async function getCoursesByCategory(categoryId: number): Promise<any> {
   try {
-    console.log(`Obteniendo cursos de la categoría ${categoryId}...`)
-
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
       throw new Error("Faltan variables de entorno: MOODLE_URL o MOODLE_TOKEN")
@@ -102,16 +105,20 @@ export async function getCoursesByCategory(categoryId: number): Promise<MoodleRe
     const MOODLE_URL = process.env.MOODLE_URL
     const MOODLE_TOKEN = process.env.MOODLE_TOKEN
 
-    // Usar axios con params
-    const response = await axios.get(`${MOODLE_URL}/webservice/rest/server.php`, {
-      params: {
-        wstoken: MOODLE_TOKEN,
-        wsfunction: "core_course_get_courses_by_field",
-        moodlewsrestformat: "json",
-        field: "category",
-        value: categoryId, // Enviamos como número, no como string
-      },
-    })
+    console.log(`Obteniendo cursos de la categoría ${categoryId}...`)
+
+    // Construir la URL con los parámetros como query string
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+
+    // Añadir parámetros
+    url.searchParams.append("wstoken", MOODLE_TOKEN)
+    url.searchParams.append("wsfunction", "core_course_get_courses_by_field")
+    url.searchParams.append("moodlewsrestformat", "json")
+    url.searchParams.append("field", "category")
+    url.searchParams.append("value", categoryId.toString())
+
+    // Hacer la solicitud GET
+    const response = await axios.get(url.toString())
 
     const result = response.data
 
@@ -131,14 +138,9 @@ export async function getCoursesByCategory(categoryId: number): Promise<MoodleRe
 
     console.log(`Se encontraron ${result.courses.length} cursos en la categoría ${categoryId}`)
 
-    // Mostrar información detallada de los cursos para depuración
-    result.courses.forEach((course: any) => {
-      console.log(`- Curso ID: ${course.id}, Nombre: ${course.fullname}`)
-    })
-
     return {
       success: true,
-      data: result.courses || [],
+      data: result.courses,
     }
   } catch (error) {
     console.error("Error al obtener cursos por categoría:", error)
@@ -168,7 +170,7 @@ export async function getCoursesByCategory(categoryId: number): Promise<MoodleRe
 /**
  * Inscribe a un usuario en todos los cursos de una categoría
  */
-export async function enrollUserInCategoryCourses(userId: number, categoryId: number): Promise<MoodleResponse<any>> {
+export async function enrollUserInCategoryCourses(userId: number, categoryId: number): Promise<any> {
   try {
     console.log(`Iniciando inscripción del usuario ${userId} en cursos de la categoría ${categoryId}...`)
 
@@ -243,12 +245,10 @@ export async function enrollUserInCategoryCourses(userId: number, categoryId: nu
   }
 }
 
-// Revisar la función que crea usuarios en Moodle para asegurarnos de que está devolviendo el nombre de usuario correctamente
-
 /**
  * Crea un usuario en Moodle a través de la API Web Services
  */
-export async function createMoodleUser(userData: MoodleUserData): Promise<MoodleResponse<any>> {
+export async function createMoodleUser(userData: MoodleUserData): Promise<any> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -268,24 +268,31 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
 
     console.log(`Creando usuario en Moodle: ${userData.username} (${userData.email})...`)
 
-    // Usar axios con params en lugar de FormData
-    const response = await axios.post(`${MOODLE_URL}/webservice/rest/server.php`, null, {
-      params: {
-        wstoken: MOODLE_TOKEN,
-        wsfunction: "core_user_create_users",
-        moodlewsrestformat: "json",
-        "users[0][username]": userData.username,
-        "users[0][password]": userData.password,
-        "users[0][firstname]": userData.firstname,
-        "users[0][lastname]": lastname,
-        "users[0][email]": userData.email,
-        "users[0][city]": userData.city || "Ciudad",
-        "users[0][country]": userData.country || "CO",
-        "users[0][auth]": "manual",
-        "users[0][lang]": "es",
-        "users[0][calendartype]": "gregorian",
-      },
-    })
+    // Construir la URL con los parámetros como query string
+    // Este enfoque funciona mejor con algunas versiones de Moodle
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+
+    // Añadir parámetros básicos
+    url.searchParams.append("wstoken", MOODLE_TOKEN)
+    url.searchParams.append("wsfunction", "core_user_create_users")
+    url.searchParams.append("moodlewsrestformat", "json")
+
+    // Añadir datos del usuario
+    url.searchParams.append("users[0][username]", userData.username)
+    url.searchParams.append("users[0][password]", userData.password)
+    url.searchParams.append("users[0][firstname]", userData.firstname)
+    url.searchParams.append("users[0][lastname]", lastname)
+    url.searchParams.append("users[0][email]", userData.email)
+    url.searchParams.append("users[0][city]", userData.city || "Ciudad")
+    url.searchParams.append("users[0][country]", userData.country || "CO")
+    url.searchParams.append("users[0][auth]", "manual")
+    url.searchParams.append("users[0][lang]", "es")
+
+    console.log("URL completa para crear usuario en Moodle:", url.toString())
+
+    // Hacer la solicitud GET en lugar de POST
+    // Algunas versiones de Moodle funcionan mejor con GET para esta operación
+    const response = await axios.get(url.toString())
 
     const result = response.data
 
@@ -302,54 +309,47 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
     }
 
     console.log(`✅ Usuario creado en Moodle con ID: ${userId}`)
-    console.log(`✅ Nombre de usuario de Moodle: ${userData.username}`)
 
-    // Siempre inscribir al usuario en los cursos de la categoría 2 (Formación DISC)
-    const categoryId = 2 // Categoría "Formación DISC" por defecto
-    console.log(`Inscribiendo usuario ${userId} en cursos de la categoría ${categoryId}...`)
-
-    const enrollmentResult = await enrollUserInCategoryCourses(userId, categoryId)
-
-    if (!enrollmentResult.success) {
-      console.warn(
-        `Advertencia: No se pudo inscribir al usuario en todos los cursos de la categoría ${categoryId}: ${enrollmentResult.error}`,
-      )
+    // Si se especificó un curso, inscribir al usuario
+    if (userData.courseid) {
+      await enrollUserInCourse(userId, userData.courseid)
     } else {
-      console.log(
-        `✅ Usuario inscrito en ${enrollmentResult.data?.successfulEnrollments || 0} cursos de la categoría ${categoryId}`,
-      )
+      // Inscribir en todos los cursos de la categoría 2 (Formación DISC)
+      await enrollUserInCategoryCourses(userId, 2)
     }
 
     return {
       success: true,
-      data: {
-        ...result,
-        ...enrollmentResult.data,
-      },
-      username: userData.username, // Asegurarnos de devolver el nombre de usuario
+      data: result,
+      username: userData.username,
     }
   } catch (error) {
     console.error("Error al crear usuario en Moodle:", error)
 
-    // Mejorar el mensaje de error para diagnóstico
     let errorMessage = "Error desconocido al crear usuario en Moodle"
 
     if (axios.isAxiosError(error)) {
       if (error.response) {
-        // La solicitud se realizó y el servidor respondió con un código de estado
-        // que no está en el rango 2xx
         console.error("Respuesta de error de Moodle:", {
           status: error.response.status,
           headers: error.response.headers,
           data: error.response.data,
         })
         errorMessage = `Error ${error.response.status}: ${error.message}`
+
+        if (error.response.data && typeof error.response.data === "object") {
+          console.error("Detalles del error de Moodle:", JSON.stringify(error.response.data, null, 2))
+          if (error.response.data.message) {
+            errorMessage += ` - ${error.response.data.message}`
+          }
+          if (error.response.data.debuginfo) {
+            errorMessage += ` - Debug: ${error.response.data.debuginfo}`
+          }
+        }
       } else if (error.request) {
-        // La solicitud se realizó pero no se recibió respuesta
         console.error("No se recibió respuesta de Moodle:", error.request)
         errorMessage = "No se recibió respuesta del servidor de Moodle"
       } else {
-        // Algo ocurrió al configurar la solicitud
         errorMessage = `Error de configuración: ${error.message}`
       }
     } else if (error instanceof Error) {
@@ -366,7 +366,7 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
 /**
  * Obtiene información de un usuario de Moodle por su email
  */
-export async function getMoodleUserByEmail(email: string): Promise<MoodleResponse<any>> {
+export async function getMoodleUserByEmail(email: string): Promise<any> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -376,16 +376,18 @@ export async function getMoodleUserByEmail(email: string): Promise<MoodleRespons
     const MOODLE_URL = process.env.MOODLE_URL
     const MOODLE_TOKEN = process.env.MOODLE_TOKEN
 
-    // Usar axios con params
-    const response = await axios.get(`${MOODLE_URL}/webservice/rest/server.php`, {
-      params: {
-        wstoken: MOODLE_TOKEN,
-        wsfunction: "core_user_get_users_by_field",
-        moodlewsrestformat: "json",
-        field: "email",
-        "values[0]": email,
-      },
-    })
+    // Construir la URL con los parámetros como query string
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+
+    // Añadir parámetros
+    url.searchParams.append("wstoken", MOODLE_TOKEN)
+    url.searchParams.append("wsfunction", "core_user_get_users_by_field")
+    url.searchParams.append("moodlewsrestformat", "json")
+    url.searchParams.append("field", "email")
+    url.searchParams.append("values[0]", email)
+
+    // Hacer la solicitud GET
+    const response = await axios.get(url.toString())
 
     const result = response.data
 
@@ -432,7 +434,7 @@ export async function getMoodleUserByEmail(email: string): Promise<MoodleRespons
 /**
  * Verifica la conexión con Moodle y devuelve información del sitio
  */
-export async function testMoodleConnection(): Promise<MoodleResponse<any>> {
+export async function testMoodleConnection(): Promise<any> {
   try {
     // Verificar que las variables de entorno estén configuradas
     if (!process.env.MOODLE_URL || !process.env.MOODLE_TOKEN) {
@@ -442,14 +444,16 @@ export async function testMoodleConnection(): Promise<MoodleResponse<any>> {
     const MOODLE_URL = process.env.MOODLE_URL
     const MOODLE_TOKEN = process.env.MOODLE_TOKEN
 
-    // Usar una función simple para probar la conexión
-    const response = await axios.get(`${MOODLE_URL}/webservice/rest/server.php`, {
-      params: {
-        wstoken: MOODLE_TOKEN,
-        wsfunction: "core_webservice_get_site_info",
-        moodlewsrestformat: "json",
-      },
-    })
+    // Construir la URL con los parámetros como query string
+    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+
+    // Añadir parámetros
+    url.searchParams.append("wstoken", MOODLE_TOKEN)
+    url.searchParams.append("wsfunction", "core_webservice_get_site_info")
+    url.searchParams.append("moodlewsrestformat", "json")
+
+    // Hacer la solicitud GET
+    const response = await axios.get(url.toString())
 
     return {
       success: true,

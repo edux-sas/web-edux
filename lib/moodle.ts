@@ -1,6 +1,5 @@
-import { type MoodleUserData, createMoodleUser as createMoodleUserAPI } from "@/lib/moodle-api"
-
-// Revisar la función que crea usuarios en Moodle para asegurarnos de que está devolviendo el nombre de usuario correctamente
+import { createMoodleUser as createMoodleUserAPI } from "@/lib/moodle-api"
+import type { MoodleUserData } from "@/lib/moodle-api"
 
 /**
  * Wrapper function to create a Moodle user.  Handles potential errors and returns a standardized response.
@@ -9,6 +8,14 @@ export async function createMoodleUser(
   userData: MoodleUserData,
 ): Promise<{ success: boolean; error?: string; data?: any; username?: string }> {
   try {
+    // Añadir log para depuración
+    console.log("Iniciando creación de usuario en Moodle con datos:", {
+      username: userData.username,
+      firstname: userData.firstname,
+      lastname: userData.lastname || "-",
+      email: userData.email,
+    })
+
     const result = await createMoodleUserAPI(userData)
 
     // Añadir log para depuración

@@ -16,8 +16,7 @@ export const metadata: Metadata = {
     "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
-    shortcut: ["/favicon.ico"],
-    apple: [{ url: "/favicon.ico" }],
+    apple: [{ url: "/apple-icon.png" }],
   },
   openGraph: {
     title: "Impulsa la transformación y lidera en tu segmento",
@@ -53,6 +52,10 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
         <meta property="og:image" content="https://edux.com.co/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -69,4 +72,3 @@ export default function RootLayout({
     </html>
   )
 }
-

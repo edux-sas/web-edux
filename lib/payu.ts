@@ -610,3 +610,329 @@ export async function processCardPayment(paymentData: {
     }
   }
 }
+
+// Función para procesar pagos con PSE
+export async function processPSEPayment(paymentData: {
+  amount: number
+  bankCode: string
+  userType: "N" | "J" // N: Persona Natural, J: Persona Jurídica
+  docType: string // CC: Cédula de ciudadanía, CE: Cédula de extranjería, etc.
+  docNumber: string
+  referenceCode?: string
+  buyerInfo: {
+    name: string
+    email: string
+    phone: string
+    document: string
+    address: string
+    city: string
+    state: string
+    country: string
+    postalCode: string
+  }
+}): Promise<PayUResponse> {
+  try {
+    // Configuración de PayU - Usar las variables de entorno públicas
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const merchantId = process.env.NEXT_PUBLIC_PAYU_MERCHANT_ID || ""
+    const accountId = process.env.NEXT_PUBLIC_PAYU_ACCOUNT_ID || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin || !merchantId || !accountId) {
+      console.error("Credenciales de PayU no configuradas correctamente:", {
+        apiKey: apiKey ? "Definido" : "No definido",
+        apiLogin: apiLogin ? "Definido" : "No definido",
+        merchantId: merchantId ? "Definido" : "No definido",
+        accountId: accountId ? "Definido" : "No definido",
+      })
+
+      return {
+        code: "ERROR",
+        error: "Credenciales de PayU no configuradas correctamente. Contacta al administrador.",
+        transactionResponse: {
+          state: "ERROR",
+          responseMessage: "Credenciales de PayU no configuradas",
+          responseCode: "ERROR",
+        },
+      }
+    }
+
+    // URL de la API de PayU (sandbox o producción)
+    const apiUrl = isTestMode
+      ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
+      : "https://api.payulatam.com/payments-api/4.0/service.cgi"
+
+    // Usar el código de referencia proporcionado o generar uno nuevo
+    let referenceCode = paymentData.referenceCode || `EDUX${Date.now()}${Math.floor(Math.random() * 1000)}`
+    referenceCode = referenceCode.trim().replace(/[^a-zA-Z0-9]/g, "")
+
+    // Generar firma usando la API Key
+    const signature = generatePayUSignature(apiKey, merchantId, referenceCode, paymentData.amount, "COP")
+
+    // Calcular base gravable e IVA (asumiendo que el precio ya incluye IVA del 19%)
+    const taxBase = Math.round(paymentData.amount / 1.19)
+    const taxValue = paymentData.amount - taxBase
+
+    // Generar deviceSessionId
+    const timestamp = Date.now().toString()
+    const randomValue = Math.random().toString(36).substring(2, 15)
+    const deviceSessionId = crypto
+      .createHash("md5")
+      .update(timestamp + randomValue)
+      .digest("hex")
+
+    // URL de retorno después del pago
+    const returnUrl = "https://edux.com.co/payment/response"
+
+    // Construir la solicitud para PayU
+    const payuRequest: PayURequest = {
+      language: "es",
+      command: "SUBMIT_TRANSACTION",
+      merchant: {
+        apiKey,
+        apiLogin,
+      },
+      transaction: {
+        order: {
+          accountId,
+          referenceCode,
+          description: "Pago eduX - PSE",
+          language: "es",
+          signature,
+          notifyUrl: "https://edux.com.co/api/payment/notification",
+          additionalValues: {
+            TX_VALUE: {
+              value: paymentData.amount,
+              currency: "COP",
+            },
+            TX_TAX: {
+              value: taxValue,
+              currency: "COP",
+            },
+            TX_TAX_RETURN_BASE: {
+              value: taxBase,
+              currency: "COP",
+            },
+          },
+          buyer: {
+            fullName: paymentData.buyerInfo.name,
+            emailAddress: paymentData.buyerInfo.email,
+            contactPhone: paymentData.buyerInfo.phone,
+            dniNumber: paymentData.buyerInfo.document,
+            shippingAddress: {
+              street1: paymentData.buyerInfo.address,
+              city: paymentData.buyerInfo.city,
+              state: paymentData.buyerInfo.state,
+              country: paymentData.buyerInfo.country,
+              postalCode: paymentData.buyerInfo.postalCode,
+              phone: paymentData.buyerInfo.phone,
+            },
+          },
+        },
+        payer: {
+          fullName: paymentData.buyerInfo.name,
+          emailAddress: paymentData.buyerInfo.email,
+          contactPhone: paymentData.buyerInfo.phone,
+          dniNumber: paymentData.docNumber,
+          billingAddress: {
+            street1: paymentData.buyerInfo.address,
+            city: paymentData.buyerInfo.city,
+            state: paymentData.buyerInfo.state,
+            country: paymentData.buyerInfo.country,
+            postalCode: paymentData.buyerInfo.postalCode,
+            phone: paymentData.buyerInfo.phone,
+          },
+        },
+        extraParameters: {
+          // Parámetros específicos para PSE
+          RESPONSE_URL: returnUrl,
+          PSE_REFERENCE1: "Pago eduX",
+          FINANCIAL_INSTITUTION_CODE: paymentData.bankCode,
+          USER_TYPE: paymentData.userType,
+          PSE_REFERENCE2: paymentData.docNumber,
+          PSE_REFERENCE3: paymentData.docType,
+        },
+        type: "AUTHORIZATION_AND_CAPTURE",
+        paymentMethod: "PSE",
+        paymentCountry: "CO",
+        deviceSessionId,
+        ipAddress: "127.0.0.1", // Esto debería ser la IP real del cliente
+        cookie: crypto.randomBytes(16).toString("hex"),
+        userAgent: "Mozilla/5.0", // Esto debería ser el User-Agent real
+      },
+      test: isTestMode,
+    }
+
+    console.log("Enviando solicitud PSE a PayU:", {
+      url: apiUrl,
+      referenceCode,
+      bankCode: paymentData.bankCode,
+      userType: paymentData.userType,
+      docType: paymentData.docType,
+    })
+
+    // Imprimir la solicitud completa para depuración (sin datos sensibles)
+    const debugRequest = JSON.parse(JSON.stringify(payuRequest))
+    console.log("Solicitud PSE completa a PayU:", JSON.stringify(debugRequest, null, 2))
+
+    // Enviar la solicitud a PayU
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payuRequest),
+    })
+
+    // Capturar la respuesta completa para depuración
+    const responseText = await response.text()
+    console.log("Respuesta completa de PayU para PSE:", responseText)
+
+    if (!response.ok) {
+      console.error(`Error en la respuesta de PayU PSE: ${response.status} ${response.statusText}`)
+      console.error("Respuesta de error completa:", responseText)
+
+      throw new Error(
+        `Error en la respuesta de PayU PSE: ${response.status} ${response.statusText}. Detalles: ${responseText}`,
+      )
+    }
+
+    // Intentar parsear la respuesta como JSON
+    let data: PayUResponse
+    try {
+      data = JSON.parse(responseText)
+    } catch (parseError) {
+      console.error("Error al parsear la respuesta de PayU PSE como JSON:", parseError)
+      console.error("Respuesta recibida:", responseText)
+      throw new Error(
+        `Error al parsear la respuesta de PayU PSE: ${parseError instanceof Error ? parseError.message : "Error desconocido"}`,
+      )
+    }
+
+    // Verificar que la respuesta tenga la estructura esperada
+    if (!data || !data.code) {
+      console.error("Respuesta de PayU PSE inválida:", data)
+      throw new Error("Respuesta de pago PSE inválida. Por favor, intenta nuevamente.")
+    }
+
+    // Si hay un error en la respuesta de PayU, formatearlo adecuadamente
+    if (data.code !== "SUCCESS") {
+      const errorMessage =
+        data.error ||
+        (data.transactionResponse && data.transactionResponse.responseMessage) ||
+        "Error en el procesamiento del pago PSE"
+      console.error("Error en respuesta de PayU PSE:", errorMessage, data)
+
+      return {
+        code: data.code,
+        error: errorMessage,
+        transactionResponse: data.transactionResponse || {
+          state: "DECLINED",
+          responseMessage: errorMessage,
+          responseCode: "ERROR",
+        },
+      }
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error al procesar el pago con PSE:", error)
+
+    return {
+      code: "ERROR",
+      error: error instanceof Error ? error.message : "Error desconocido en el procesamiento del pago PSE",
+      transactionResponse: {
+        state: "ERROR",
+        responseMessage: error instanceof Error ? error.message : "Error desconocido",
+        responseCode: "SYSTEM_ERROR",
+      },
+    }
+  }
+}
+
+// Función para obtener la lista de bancos PSE
+export async function getPSEBanks(): Promise<{
+  success: boolean
+  banks?: Array<{ description: string; pseCode: string }>
+  error?: string
+}> {
+  try {
+    // Configuración de PayU
+    const apiKey = process.env.NEXT_PUBLIC_PAYU_API_KEY || ""
+    const apiLogin = process.env.NEXT_PUBLIC_PAYU_API_LOGIN || ""
+    const isTestMode = process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true"
+
+    // Verificar que las credenciales estén definidas
+    if (!apiKey || !apiLogin) {
+      console.error("Credenciales de PayU no configuradas correctamente")
+      return {
+        success: false,
+        error: "Credenciales de PayU no configuradas correctamente",
+      }
+    }
+
+    // URL de la API de PayU (sandbox o producción)
+    const apiUrl = isTestMode
+      ? "https://sandbox.api.payulatam.com/payments-api/4.0/service.cgi"
+      : "https://api.payulatam.com/payments-api/4.0/service.cgi"
+
+    // Construir la solicitud para obtener los bancos PSE
+    const request = {
+      language: "es",
+      command: "GET_BANKS_LIST",
+      merchant: {
+        apiKey,
+        apiLogin,
+      },
+      test: isTestMode,
+      bankListInformation: {
+        paymentMethod: "PSE",
+        paymentCountry: "CO",
+      },
+    }
+
+    // Enviar la solicitud a PayU
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(request),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Error en la respuesta de PayU: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+
+    // Verificar que la respuesta tenga la estructura esperada
+    if (!data || data.code !== "SUCCESS" || !Array.isArray(data.banks)) {
+      console.error("Respuesta de bancos PSE inválida:", data)
+      return {
+        success: false,
+        error: "No se pudo obtener la lista de bancos",
+      }
+    }
+
+    // Formatear la respuesta
+    return {
+      success: true,
+      banks: data.banks.map((bank: any) => ({
+        description: bank.description,
+        pseCode: bank.pseCode,
+      })),
+    }
+  } catch (error) {
+    console.error("Error al obtener la lista de bancos PSE:", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Error desconocido al obtener la lista de bancos",
+    }
+  }
+}
+

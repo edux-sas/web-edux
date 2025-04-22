@@ -7,9 +7,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { CreditCard, AlertCircle } from "lucide-react"
+import { CreditCard, AlertCircle, Building2, Info } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { validateCardNumber } from "@/lib/payu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface PaymentMethodsProps {
   onMethodChange: (method: string) => void
@@ -52,128 +53,37 @@ export function PaymentMethods({
     setIsTestMode(process.env.NEXT_PUBLIC_PAYU_TEST_MODE === "true")
   }, [])
 
+  // Cargar la lista de bancos al iniciar
+  useEffect(() => {
+    const fetchBanks = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/payment/get-pse-banks")
+        if (!response.ok) {
+          throw new Error("Error al obtener la lista de bancos")
+        }
+        const data = await response.json()
+        if (data.success && Array.isArray(data.banks)) {
+          setBanks(data.banks)
+        } else {
+          console.error("Formato de respuesta inesperado:", data)
+        }
+      } catch (error) {
+        console.error("Error al cargar bancos PSE:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (paymentMethod === "pse") {
+      fetchBanks()
+    }
+  }, [paymentMethod])
+
   // Notificar cambio de método de pago
   useEffect(() => {
     onMethodChange(paymentMethod)
   }, [paymentMethod, onMethodChange])
-
-  // Función para validar el número de tarjeta usando el algoritmo de Luhn
-  // const validateCardNumber = (cardNumber: string): boolean => {
-  //   // Eliminar espacios y guiones
-  //   const cleanNumber = cardNumber.replace(/[\s-]/g, "")
-
-  //   // Verificar que solo contenga dígitos y tenga una longitud válida (13-19 dígitos)
-  //   if (!/^\d{13,19}$/.test(cleanNumber)) {
-  //     return false
-  //   }
-
-  //   // Algoritmo de Luhn (módulo 10)
-  //   let sum = 0
-  //   let shouldDouble = false
-
-  //   // Recorrer el número de derecha a izquierda
-  //   for (let i = cleanNumber.length - 1; i >= 0; i--) {
-  //     let digit = Number.parseInt(cleanNumber.charAt(i))
-
-  //     if (shouldDouble) {
-  //       digit *= 2
-  //       if (digit > 9) {
-  //         digit -= 9
-  //       }
-  //     }
-
-  //     sum += digit
-  //     shouldDouble = !shouldDouble
-  //   }
-
-  //   return sum % 10 === 0
-  // }
-
-  // Manejar cambios en datos de tarjeta
-  // const handleCardChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   const { name, value } = e.target
-  //   let formattedValue = value
-  //   let error = ""
-
-  //   // Formateo y validación específica para cada campo
-  //   if (name === "cardNumber") {
-  //     // Eliminar caracteres no numéricos
-  //     const digitsOnly = value.replace(/\D/g, "")
-
-  //     // Formatear con espacios cada 4 dígitos
-  //     formattedValue = digitsOnly.replace(/(\d{4})(?=\d)/g, "$1 ").trim()
-
-  //     // Limitar a 19 dígitos (16 dígitos + 3 espacios)
-  //     formattedValue = formattedValue.substring(0, 19)
-
-  //     // Validar el número de tarjeta si tiene al menos 13 dígitos
-  //     if (digitsOnly.length >= 13) {
-  //       if (!validateCardNumber(digitsOnly)) {
-  //         error = "Número de tarjeta inválido"
-  //       }
-  //     }
-  //   } else if (name === "cardName") {
-  //     // Validar que el nombre tenga al menos 3 caracteres
-  //     if (value.length > 0 && value.length < 3) {
-  //       error = "Nombre demasiado corto"
-  //     }
-  //   } else if (name === "cardExpiry") {
-  //     // Eliminar caracteres no numéricos excepto '/'
-  //     const cleaned = value.replace(/[^\d/]/g, "")
-
-  //     // Formatear como MM/YY
-  //     if (cleaned.length <= 2) {
-  //       formattedValue = cleaned
-  //     } else {
-  //       // Asegurar que solo haya un '/'
-  //       const parts = cleaned.split("/")
-  //       const month = parts[0].substring(0, 2)
-  //       const year = parts.length > 1 ? parts[1].substring(0, 2) : cleaned.substring(2, 4)
-
-  //       formattedValue = `${month}/${year}`
-  //     }
-
-  //     // Validar el mes y año
-  //     if (formattedValue.length === 5) {
-  //       const [month, year] = formattedValue.split("/")
-  //       const currentDate = new Date()
-  //       const currentYear = currentDate.getFullYear() % 100 // Últimos 2 dígitos del año actual
-  //       const currentMonth = currentDate.getMonth() + 1 // Mes actual (1-12)
-
-  //       const monthNum = Number.parseInt(month)
-  //       const yearNum = Number.parseInt(year)
-
-  //       if (monthNum < 1 || monthNum > 12) {
-  //         error = "Mes inválido"
-  //       } else if (yearNum < currentYear || (yearNum === currentYear && monthNum < currentMonth)) {
-  //         error = "Tarjeta vencida"
-  //       }
-  //     }
-  //   } else if (name === "cardCvc") {
-  //     // Eliminar caracteres no numéricos
-  //     formattedValue = value.replace(/\D/g, "")
-
-  //     // Limitar a 4 dígitos
-  //     formattedValue = formattedValue.substring(0, 4)
-
-  //     // Validar longitud del CVC
-  //     if (formattedValue.length > 0 && formattedValue.length < 3) {
-  //       error = "CVC demasiado corto"
-  //     }
-  //   }
-
-  //   // Actualizar datos de tarjeta
-  //   const newCardData = { ...cardData, [name]: formattedValue }
-  //   setCardData(newCardData)
-
-  //   // Actualizar errores
-  //   setCardErrors({ ...cardErrors, [name]: error })
-
-  //   // Notificar cambios al componente padre
-  //   if (onCardDataChange) {
-  //     onCardDataChange(newCardData)
-  //   }
-  // }
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -231,7 +141,7 @@ export function PaymentMethods({
     // Actualizar datos y errores
     setCardData((prev) => ({ ...prev, [name]: formattedValue }))
     setCardErrors((prev) => ({ ...prev, [name]: error }))
-    onCardDataChange({ ...cardData, [name]: formattedValue })
+    onCardDataChange?.({ ...cardData, [name]: formattedValue })
   }
 
   // Manejar cambios en datos de PSE
@@ -264,15 +174,13 @@ export function PaymentMethods({
               Tarjeta de Crédito/Débito
             </Label>
           </div>
-          {/* Opción de PSE oculta pero mantenida para uso futuro
-         <div className="flex items-center space-x-2 border rounded-md p-3">
-           <RadioGroupItem value="pse" id="pse" />
-           <Label htmlFor="pse" className="flex items-center gap-2 cursor-pointer">
-             <Building2 className="h-5 w-5" />
-             PSE - Débito bancario
-           </Label>
-         </div>
-         */}
+          <div className="flex items-center space-x-2 border rounded-md p-3">
+            <RadioGroupItem value="pse" id="pse" />
+            <Label htmlFor="pse" className="flex items-center gap-2 cursor-pointer">
+              <Building2 className="h-5 w-5" />
+              PSE - Débito bancario
+            </Label>
+          </div>
         </RadioGroup>
       </div>
 
@@ -284,77 +192,11 @@ export function PaymentMethods({
               <Alert className="mb-4 bg-amber-50 border-amber-200">
                 <AlertCircle className="h-4 w-4 text-amber-500" />
                 <AlertDescription className="text-amber-600">
-                  Modo de prueba: Usa la tarjeta 4037997623271984 con fecha futura y CVC 321.
+                  Modo de prueba: Usa la tarjeta 4111111111111111 con fecha futura y CVC 123.
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* <div className="space-y-2">
-              <Label htmlFor="cardName">Nombre en la Tarjeta</Label>
-              <Input
-                id="cardName"
-                name="cardName"
-                placeholder="Nombre completo como aparece en la tarjeta"
-                value={cardData.cardName}
-                onChange={handleCardChange}
-                required
-                disabled={disabled}
-                className={`focus:border-primary ${cardErrors.cardName ? "border-red-500" : ""}`}
-                autoComplete="cc-name"
-              />
-              {cardErrors.cardName && <p className="text-xs text-red-500 mt-1">{cardErrors.cardName}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="cardNumber">Número de Tarjeta</Label>
-              <Input
-                id="cardNumber"
-                name="cardNumber"
-                placeholder="1234 5678 9012 3456"
-                value={cardData.cardNumber}
-                onChange={handleCardChange}
-                required
-                disabled={disabled}
-                className={`font-mono focus:border-primary ${cardErrors.cardNumber ? "border-red-500" : ""}`}
-                autoComplete="cc-number"
-              />
-              {cardErrors.cardNumber && <p className="text-xs text-red-500 mt-1">{cardErrors.cardNumber}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardExpiry">Fecha de Expiración</Label>
-                <Input
-                  id="cardExpiry"
-                  name="cardExpiry"
-                  placeholder="MM/AA"
-                  value={cardData.cardExpiry}
-                  onChange={handleCardChange}
-                  required
-                  disabled={disabled}
-                  className={`font-mono focus:border-primary ${cardErrors.cardExpiry ? "border-red-500" : ""}`}
-                  autoComplete="cc-exp"
-                />
-                {cardErrors.cardExpiry && <p className="text-xs text-red-500 mt-1">{cardErrors.cardExpiry}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cardCvc">CVC/CVV</Label>
-                <Input
-                  id="cardCvc"
-                  name="cardCvc"
-                  placeholder="123"
-                  value={cardData.cardCvc}
-                  onChange={handleCardChange}
-                  required
-                  disabled={disabled}
-                  className={`font-mono focus:border-primary ${cardErrors.cardCvc ? "border-red-500" : ""}`}
-                  autoComplete="cc-csc"
-                  type="password"
-                />
-                {cardErrors.cardCvc && <p className="text-xs text-red-500 mt-1">{cardErrors.cardCvc}</p>}
-              </div>
-            </div> */}
             <div className="space-y-2">
               <Label htmlFor="cardNumber">Número de Tarjeta</Label>
               <Input
@@ -419,7 +261,97 @@ export function PaymentMethods({
         </Card>
       )}
 
-      {/* Formulario de PSE - Comentado pero mantenido para uso futuro */}
+      {/* Formulario de PSE */}
+      {paymentMethod === "pse" && (
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            {isTestMode && (
+              <Alert className="mb-4 bg-amber-50 border-amber-200">
+                <Info className="h-4 w-4 text-amber-500" />
+                <AlertDescription className="text-amber-600">
+                  Modo de prueba: Puedes usar cualquier banco para simular un pago PSE.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="bankCode">Selecciona tu banco</Label>
+              <Select
+                value={pseData.bankCode}
+                onValueChange={(value) => handlePSEChange("bankCode", value)}
+                disabled={disabled || loading || banks.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona tu banco" />
+                </SelectTrigger>
+                <SelectContent>
+                  {banks.map((bank) => (
+                    <SelectItem key={bank.pseCode} value={bank.pseCode}>
+                      {bank.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {loading && <p className="text-xs text-muted-foreground">Cargando bancos...</p>}
+              {!loading && banks.length === 0 && (
+                <p className="text-xs text-red-500">No se pudieron cargar los bancos. Intenta más tarde.</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="userType">Tipo de persona</Label>
+              <Select
+                value={pseData.userType}
+                onValueChange={(value) => handlePSEChange("userType", value)}
+                disabled={disabled}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona tipo de persona" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="N">Persona Natural</SelectItem>
+                  <SelectItem value="J">Persona Jurídica</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="docType">Tipo de documento</Label>
+              <Select
+                value={pseData.docType}
+                onValueChange={(value) => handlePSEChange("docType", value)}
+                disabled={disabled}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecciona tipo de documento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                  <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                  <SelectItem value="NIT">NIT</SelectItem>
+                  <SelectItem value="TI">Tarjeta de Identidad</SelectItem>
+                  <SelectItem value="PP">Pasaporte</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="docNumber">Número de documento</Label>
+              <Input
+                id="docNumber"
+                value={pseData.docNumber}
+                onChange={(e) => handlePSEChange("docNumber", e.target.value)}
+                placeholder="Ingresa tu número de documento"
+                disabled={disabled}
+              />
+            </div>
+
+            <div className="text-xs text-muted-foreground mt-2">
+              <p>Al continuar, serás redirigido al sitio web de tu banco para completar el pago de forma segura.</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { checkSupabaseConnection } from "@/lib/supabase"
 import { PaymentMethods } from "@/components/payment-methods"
-import { processCardPayment } from "@/lib/payu"
+import { processCardPayment, processPSEPayment } from "@/lib/payu"
 
 // Importar la función de validación de tarjeta desde payu.ts
 import { validateCardNumber, formatCardErrorMessage } from "@/lib/payu"
@@ -128,9 +128,9 @@ export default function CheckoutPage() {
   const planDetails = {
     professional: {
       name: "Profesional",
-      price: "$13.000",
+      price: "$169.000",
       priceCurrency: "COP",
-      priceValue: 13000,
+      priceValue: 169000,
     },
     enterprise: {
       name: "Empresarial",
@@ -183,12 +183,12 @@ export default function CheckoutPage() {
 
   const handlePSEDataChange = (data: any) => {
     setPseData(data)
+    // Limpiar errores previos al cambiar los datos de PSE
+    setPaymentError(null)
   }
 
   // Verificar si la contraseña cumple con todos los requisitos
   const isPasswordValid = Object.values(passwordValidation).every(Boolean)
-
-  // Función para formatear mensajes de error de tarjeta
 
   // Modificar la función handleSubmit para manejar usuarios autenticados
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
       }
     }
 
-    // Validar el número de tarjeta antes de procesar el pago
+    // Validaciones específicas según el método de pago
     if (paymentMethod === "card") {
       const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
       if (!validateCardNumber(cleanCardNumber)) {
@@ -266,6 +266,31 @@ export default function CheckoutPage() {
         setLoading(false)
         return
       }
+    } else if (paymentMethod === "pse") {
+      // Validaciones para PSE
+      if (!pseData.bankCode) {
+        const errorMsg = "Por favor selecciona un banco."
+        setPaymentError(errorMsg)
+        toast({
+          title: "Banco no seleccionado",
+          description: errorMsg,
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
+
+      if (!pseData.docNumber) {
+        const errorMsg = "Por favor ingresa tu número de documento."
+        setPaymentError(errorMsg)
+        toast({
+          title: "Documento no ingresado",
+          description: errorMsg,
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
     }
 
     // Generar un código de referencia único para el seguimiento de la transacción
@@ -302,9 +327,6 @@ export default function CheckoutPage() {
       // Monto del pago
       const amount = plan.priceValue
 
-      // Limpiar número de tarjeta (quitar espacios)
-      const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
-
       // Imprimir las credenciales que se están usando para depuración
       console.log("Credenciales PayU que se están usando:", {
         NEXT_PUBLIC_PAYU_API_KEY: process.env.NEXT_PUBLIC_PAYU_API_KEY || "No definido",
@@ -314,7 +336,7 @@ export default function CheckoutPage() {
       })
 
       // Si estamos en modo de prueba y los datos de la tarjeta son válidos, simular una aprobación
-      if (isTestMode && cardData.cardNumber && cardData.cardName && cardData.cardExpiry && cardData.cardCvc) {
+      if (isTestMode) {
         // Importar la función de simulación
         const { simulateApprovedPayment } = await import("@/lib/test-mode-utils")
 
@@ -323,6 +345,9 @@ export default function CheckoutPage() {
 
         console.log("MODO PRUEBA: Simulando aprobación de pago", paymentResponse)
       } else if (paymentMethod === "card") {
+        // Limpiar número de tarjeta (quitar espacios)
+        const cleanCardNumber = cardData.cardNumber.replace(/\s+/g, "")
+
         paymentResponse = await processCardPayment({
           cardNumber: cleanCardNumber,
           cardName: cardData.cardName,
@@ -332,9 +357,7 @@ export default function CheckoutPage() {
           buyerInfo,
           referenceCode, // Añadir el código de referencia
         })
-      }
-      /* PSE está oculto pero mantenemos el código para uso futuro
-      else if (paymentMethod === "pse") {
+      } else if (paymentMethod === "pse") {
         paymentResponse = await processPSEPayment({
           amount,
           bankCode: pseData.bankCode,
@@ -355,7 +378,6 @@ export default function CheckoutPage() {
           return
         }
       }
-      */
 
       // Verificar si el pago fue exitoso
       if (
@@ -583,9 +605,12 @@ export default function CheckoutPage() {
   const isFormValid = isAuthenticated
     ? formData.terms &&
       supabaseStatus?.connected === true &&
-      (paymentMethod === "card"
-        ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-        : false) && // PSE está oculto
+      ((paymentMethod === "card" &&
+        cardData.cardName &&
+        cardData.cardNumber &&
+        cardData.cardExpiry &&
+        cardData.cardCvc) ||
+        (paymentMethod === "pse" && pseData.bankCode && pseData.docNumber)) &&
       !paymentError // Añadir validación para errores de pago
     : formData.email &&
       formData.name &&
@@ -593,9 +618,12 @@ export default function CheckoutPage() {
       isPasswordValid &&
       formData.terms &&
       supabaseStatus?.connected === true &&
-      (paymentMethod === "card"
-        ? cardData.cardName && cardData.cardNumber && cardData.cardExpiry && cardData.cardCvc
-        : false) && // PSE está oculto
+      ((paymentMethod === "card" &&
+        cardData.cardName &&
+        cardData.cardNumber &&
+        cardData.cardExpiry &&
+        cardData.cardCvc) ||
+        (paymentMethod === "pse" && pseData.bankCode && pseData.docNumber)) &&
       (!showAdditionalFields || (formData.phone && formData.document && formData.address)) &&
       !paymentError // Añadir validación para errores de pago
 
@@ -842,6 +870,19 @@ export default function CheckoutPage() {
                                 </ul>
                               </div>
                             )}
+                          </div>
+                        )}
+
+                        {/* Información sobre PSE */}
+                        {paymentMethod === "pse" && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
+                            <p className="text-blue-700 flex items-start">
+                              <Info className="h-4 w-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <span>
+                                Serás redirigido al sitio web de tu banco para completar el pago de forma segura.
+                                Asegúrate de tener habilitado el servicio de pagos PSE en tu cuenta bancaria.
+                              </span>
+                            </p>
                           </div>
                         )}
                       </div>

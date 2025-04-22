@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://edux.com.co/sitemap.xml

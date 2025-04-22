@@ -27,8 +27,8 @@ const baseUrl = getBaseUrl()
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "eduX Academy - Impulsa la transformación y lidera en tu segmento",
-    template: "%s | eduX Academy",
+    default: "eduX  - Impulsa la transformación y lidera en tu segmento",
+    template: "%s | eduX ",
   },
   description:
     "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
@@ -42,9 +42,9 @@ export const metadata: Metadata = {
     "formación profesional",
     "Colombia",
   ],
-  authors: [{ name: "eduX Academy", url: baseUrl }],
-  creator: "eduX Academy",
-  publisher: "eduX Academy",
+  authors: [{ name: "eduX ", url: baseUrl }],
+  creator: "eduX ",
+  publisher: "eduX ",
   formatDetection: {
     email: false,
     address: false,
@@ -76,8 +76,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_ES",
     url: baseUrl,
-    siteName: "eduX Academy",
-    title: "eduX Academy - Impulsa la transformación y lidera en tu segmento",
+    siteName: "eduX ",
+    title: "eduX  - Impulsa la transformación y lidera en tu segmento",
     description:
       "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
     images: [
@@ -85,13 +85,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "eduX Academy - Impulsa la transformación y lidera en tu segmento",
+        alt: "eduX  - Impulsa la transformación y lidera en tu segmento",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "eduX Academy - Impulsa la transformación y lidera en tu segmento",
+    title: "eduX  - Impulsa la transformación y lidera en tu segmento",
     description:
       "En eduX convertimos tu visión en innovación. Descubre soluciones integrales en software a la medida, educación virtual, desarrollo de habilidades blandas y tecnología de punta para instituciones.",
     images: ["/og-image.png"],
@@ -125,10 +125,10 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
 
         {/* Metaetiquetas adicionales para SEO */}
-        <meta name="application-name" content="eduX Academy" />
+        <meta name="application-name" content="eduX " />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="eduX Academy" />
+        <meta name="apple-mobile-web-app-title" content="eduX " />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#00a5e9" />
         <meta name="theme-color" content="#00a5e9" />
@@ -137,13 +137,13 @@ export default function RootLayout({
         <meta property="og:image" content="/og-image.png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="eduX Academy - Impulsa la transformación y lidera en tu segmento" />
+        <meta property="og:image:alt" content="eduX  - Impulsa la transformación y lidera en tu segmento" />
         <meta property="og:locale" content="es_ES" />
-        <meta property="og:site_name" content="eduX Academy" />
+        <meta property="og:site_name" content="eduX " />
 
         {/* Metaetiquetas Twitter adicionales */}
         <meta name="twitter:image" content="/og-image.png" />
-        <meta name="twitter:image:alt" content="eduX Academy - Impulsa la transformación y lidera en tu segmento" />
+        <meta name="twitter:image:alt" content="eduX  - Impulsa la transformación y lidera en tu segmento" />
         <meta name="twitter:site" content="@edux" />
 
         {/* Metaetiquetas para SEO local */}

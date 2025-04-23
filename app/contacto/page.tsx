@@ -55,7 +55,7 @@ export default function ContactPage() {
                       <Mail className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-medium">Correo electrónico</h4>
-                        <p className="text-muted-foreground">formacionedux@gmail.com</p>
+                        <p className="text-muted-foreground">info@edux.com.co</p>
                       </div>
                     </div>
 

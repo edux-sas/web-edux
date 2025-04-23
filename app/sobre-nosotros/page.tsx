@@ -23,25 +23,27 @@ export default function AboutUsPage() {
   const values = [
     {
       icon: <Lightbulb className="h-8 w-8 text-primary" />,
-      title: "Innovación",
+      title: "Innovación con propósito",
       description:
-        "Buscamos constantemente nuevas formas de mejorar la experiencia de aprendizaje y desarrollo profesional.",
+        "Adoptamos la tecnología y el conocimiento como medios para crear soluciones que realmente marcan la diferencia.",
     },
     {
       icon: <Heart className="h-8 w-8 text-primary" />,
-      title: "Pasión",
-      description: "Amamos lo que hacemos y creemos en el poder transformador de la educación y el autoconocimiento.",
+      title: "Humanismo digital",
+      description:
+        "Ponemos a las personas en el centro de la transformación, integrando lo humano con lo tecnológico para lograr un desarrollo más completo y sostenible.",
     },
     {
       icon: <CheckCircle className="h-8 w-8 text-primary" />,
-      title: "Excelencia",
+      title: "Calidad y adaptabilidad",
       description:
-        "Nos comprometemos a ofrecer la más alta calidad en todos nuestros cursos y herramientas de evaluación.",
+        "Diseñamos experiencias formativas y tecnológicas que combinan excelencia con flexibilidad, adaptándose a cada necesidad.",
     },
     {
       icon: <TrendingUp className="h-8 w-8 text-primary" />,
-      title: "Crecimiento",
-      description: "Fomentamos el desarrollo continuo, tanto en nuestros estudiantes como en nuestro equipo.",
+      title: "Colaboración estratégica",
+      description:
+        "Creemos en el poder de construir juntos: con nuestros clientes, aliados y equipo, para alcanzar metas comunes con visión de futuro.",
     },
   ]
 
@@ -129,8 +131,10 @@ export default function AboutUsPage() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Sobre eduX </h1>
                 <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                  Somos una academia dedicada a transformar el desarrollo personal y profesional a través de cursos de
-                  alta calidad y herramientas de evaluación como el Test DISC.
+                Somos una empresa especializada en transformación digital que impulsa el crecimiento personal y
+                  organizacional a través de soluciones tecnológicas personalizadas, soluciones de infraestructura
+                  fisica y digital, formación virtual y desarrollo de habilidades blandas con herramientas como el Test
+                  DISC.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
@@ -162,7 +166,8 @@ export default function AboutUsPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestra Misión y Visión</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Impulsamos el crecimiento personal y profesional a través de educación de calidad y autoconocimiento.
+              Conectamos innovación, conocimiento y tecnología para transformar desafíos en oportunidades de
+              crecimiento sostenible.
               </p>
             </div>
           </div>
@@ -171,18 +176,19 @@ export default function AboutUsPage() {
               <Target className="h-12 w-12 text-primary" />
               <h3 className="text-2xl font-bold">Misión</h3>
               <p className="text-muted-foreground">
-                Proporcionar herramientas educativas y de evaluación de alta calidad que permitan a las personas y
-                organizaciones alcanzar su máximo potencial, fomentando el desarrollo de habilidades técnicas y blandas
-                en un entorno de aprendizaje innovador y accesible.
+              Impulsamos la evolución digital de personas y organizaciones a través de soluciones de infraestructura
+                fisica y virtual, soluciones tecnológicas personalizadas, formación virtual de alto impacto y el
+                desarrollo de habilidades humanas clave. Conectamos innovación, conocimiento y tecnología para
+                transformar desafíos en oportunidades de crecimiento sostenible.
               </p>
             </Card>
             <Card className="flex flex-col items-center text-center p-6 space-y-4">
               <Lightbulb className="h-12 w-12 text-primary" />
               <h3 className="text-2xl font-bold">Visión</h3>
               <p className="text-muted-foreground">
-                Ser reconocidos como líderes en la transformación educativa en Latinoamérica, creando un impacto
-                positivo en la vida profesional de miles de personas a través de metodologías innovadoras que combinen
-                el aprendizaje técnico con el desarrollo personal.
+              Ser líderes en la transformación digital integral en Latinoamérica, siendo reconocidos por nuestra
+                capacidad de conectar talento, tecnología y educación para construir un futuro más inteligente,
+                colaborativo y humano.
               </p>
             </Card>
           </div>
@@ -196,7 +202,8 @@ export default function AboutUsPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestros Valores</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Los principios que guían nuestro trabajo y compromiso con la excelencia educativa.
+              Los principios que guían cada solución, proyecto y experiencia que entregamos para transformar el futuro
+              digital de personas y organizaciones.
               </p>
             </div>
           </div>
@@ -262,8 +269,9 @@ export default function AboutUsPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">Nuestro Enfoque</h2>
               <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Combinamos metodologías innovadoras con tecnología de vanguardia para ofrecer una experiencia educativa
-                transformadora.
+              Aceleramos la transformación digital conectando talento, tecnología y educación. Nuestro enfoque combina
+                metodologías pedagógicas innovadoras, herramientas tecnológicas avanzadas y acompañamiento humano, para
+                generar experiencias de aprendizaje y desarrollo verdaderamente sostenibles.
               </p>
             </div>
           </div>
@@ -280,27 +288,26 @@ export default function AboutUsPage() {
             <div className="flex flex-col justify-center space-y-4">
               <h3 className="text-2xl font-bold">Metodología Centrada en Resultados</h3>
               <p className="text-muted-foreground">
-                Nuestro enfoque pedagógico se basa en el aprendizaje activo y la aplicación práctica de conocimientos.
-                Combinamos teoría con ejercicios prácticos, estudios de caso y proyectos reales para garantizar que
-                nuestros estudiantes no solo adquieran conocimientos, sino que desarrollen habilidades aplicables
-                inmediatamente en su entorno profesional.
+              Diseñamos experiencias que integran conocimiento, práctica y tecnología para lograr una transformación
+                real. Nuestro modelo promueve el aprendizaje activo, la resolución de problemas reales y el desarrollo
+                de habilidades aplicables de forma inmediata en contextos personales y organizacionales.
               </p>
               <ul className="space-y-2">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                  <span>Aprendizaje basado en proyectos reales</span>
+                  <span>Aprendizaje activo y aplicado</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                  <span>Evaluación continua y retroalimentación personalizada</span>
+                  <span>Personalización centrada en el usuario</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                  <span>Integración de herramientas tecnológicas avanzadas</span>
+                  <span>Integración tecnológica estratégica</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                  <span>Acompañamiento durante todo el proceso de aprendizaje</span>
+                  <span>Desarrollo humano como eje de transformación</span>
                 </li>
               </ul>
             </div>

@@ -20,8 +20,8 @@ export default function Footer() {
             </span>
           </Link>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            En eduX estamos comprometidos con la transformación digital y el éxito compartido. Descubre nuestras
-            soluciones, conecta con nuestro equipo y sé parte del cambio. ¡Contáctanos y transformemos juntos el futuro!
+          En eduX estamos comprometidos con la transformación digital y el éxito compartido. Descubre nuestras
+          soluciones, conecta con nuestro equipo y sé parte del cambio. ¡Contáctanos y transformemos juntos el futuro!
           </p>
           <div className="flex space-x-5 mt-8">
             <Link
@@ -137,7 +137,7 @@ export default function Footer() {
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-primary shrink-0" />
                 <Link href="mailto:info@edux.com.co" className="text-muted-foreground hover:text-primary">
-                  formacionedux@gmail.com
+                info@edux.com.co 
                 </Link>
               </li>
               <li className="flex items-center gap-3">

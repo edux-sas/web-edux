@@ -21,6 +21,7 @@ import {
   Copy,
   CheckCircle,
   Loader2,
+  RefreshCw,
 } from "lucide-react"
 import { getCurrentUser, getDiscResults, getUserData } from "@/lib/supabase"
 import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
@@ -54,6 +55,133 @@ export default function DashboardPage() {
   const [timeRemaining, setTimeRemaining] = useState<string | null>(null)
   const [countdown, setCountdown] = useState<NodeJS.Timeout | null>(null)
   const [copied, setCopied] = useState(false)
+  const [checkingMoodle, setCheckingMoodle] = useState(false)
+  const [moodleCheckInterval, setMoodleCheckInterval] = useState<NodeJS.Timeout | null>(null)
+  const [retryingMoodle, setRetryingMoodle] = useState(false)
+
+  // Función para verificar el nombre de usuario de Moodle
+  const checkMoodleUsername = async (userId: string) => {
+    if (!userId) return false
+
+    try {
+      setCheckingMoodle(true)
+      const response = await fetch(`/api/moodle/check-username?userId=${userId}`)
+
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.moodleUsername) {
+          // Actualizar el estado del usuario con el nombre de usuario de Moodle
+          setUser((prevUser) => {
+            if (!prevUser) return null
+
+            const updatedUser = {
+              ...prevUser,
+              moodle_username: data.moodleUsername,
+            }
+
+            // Actualizar también en localStorage
+            localStorage.setItem("eduXUser", JSON.stringify(updatedUser))
+
+            return updatedUser
+          })
+
+          // Mostrar notificación
+          toast({
+            title: "¡Cuenta de Moodle creada!",
+            description: `Tu nombre de usuario de Moodle es: ${data.moodleUsername}`,
+          })
+
+          // Detener el intervalo de verificación
+          if (moodleCheckInterval) {
+            clearInterval(moodleCheckInterval)
+            setMoodleCheckInterval(null)
+          }
+
+          setCheckingMoodle(false)
+          return true
+        }
+      }
+
+      setCheckingMoodle(false)
+      return false
+    } catch (error) {
+      console.error("Error al verificar nombre de usuario de Moodle:", error)
+      setCheckingMoodle(false)
+      return false
+    }
+  }
+
+  // Función para iniciar el proceso de reintentos de integración con Moodle
+  const retryMoodleIntegration = async () => {
+    if (!user || !user.id || !user.email || !user.name) {
+      toast({
+        title: "Error",
+        description: "No se puede iniciar el proceso de reintentos sin los datos del usuario",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setRetryingMoodle(true)
+
+      // Solicitar al usuario su contraseña
+      const password = prompt("Por favor, ingresa tu contraseña para continuar con la integración de Moodle:")
+
+      if (!password) {
+        setRetryingMoodle(false)
+        return
+      }
+
+      const response = await fetch("/api/moodle/retry-integration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          password,
+          name: user.name,
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Proceso iniciado",
+          description: "Se ha iniciado el proceso de integración con Moodle. Esto puede tardar unos minutos.",
+        })
+
+        // Iniciar un intervalo para verificar periódicamente si ya se creó el usuario en Moodle
+        if (moodleCheckInterval) {
+          clearInterval(moodleCheckInterval)
+        }
+
+        const interval = setInterval(() => {
+          checkMoodleUsername(user.id!).then((success) => {
+            if (success) {
+              clearInterval(interval)
+              setMoodleCheckInterval(null)
+            }
+          })
+        }, 10000) // Verificar cada 10 segundos
+
+        setMoodleCheckInterval(interval)
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Error al iniciar el proceso de reintentos")
+      }
+    } catch (error) {
+      console.error("Error al iniciar reintentos de Moodle:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Error desconocido",
+        variant: "destructive",
+      })
+    } finally {
+      setRetryingMoodle(false)
+    }
+  }
 
   useEffect(() => {
     // Función para cargar los datos del usuario y resultados DISC
@@ -151,6 +279,26 @@ export default function DashboardPage() {
           router.push("/test-disc/start")
           return
         }
+
+        // Si el usuario no tiene un nombre de usuario de Moodle, iniciar verificación periódica
+        if (!userData.moodle_username && userId) {
+          // Verificar inmediatamente
+          const hasMoodleUsername = await checkMoodleUsername(userId)
+
+          // Si no tiene, configurar un intervalo para verificar periódicamente
+          if (!hasMoodleUsername) {
+            const interval = setInterval(() => {
+              checkMoodleUsername(userId!).then((success) => {
+                if (success) {
+                  clearInterval(interval)
+                  setMoodleCheckInterval(null)
+                }
+              })
+            }, 30000) // Verificar cada 30 segundos
+
+            setMoodleCheckInterval(interval)
+          }
+        }
       }
 
       setIsLoading(false)
@@ -177,6 +325,9 @@ export default function DashboardPage() {
     return () => {
       if (countdown) {
         clearInterval(countdown)
+      }
+      if (moodleCheckInterval) {
+        clearInterval(moodleCheckInterval)
       }
     }
   }, [router, toast])
@@ -214,22 +365,6 @@ export default function DashboardPage() {
   }
 
   const dominantProfile = getDominantProfile()
-
-  // Función para obtener el icono según el tipo de perfil
-  const getProfileIcon = (type: string) => {
-    switch (type) {
-      case "D":
-        return <Zap className="h-5 w-5 text-blue-500" />
-      case "I":
-        return <Heart className="h-5 w-5 text-yellow-500" />
-      case "S":
-        return <Shield className="h-5 w-5 text-green-500" />
-      case "C":
-        return <Brain className="h-5 w-5 text-orange-500" />
-      default:
-        return <Info className="h-5 w-5 text-primary" />
-    }
-  }
 
   if (isLoading) {
     return (
@@ -450,9 +585,31 @@ export default function DashboardPage() {
                       )}
                     </div>
                     {!user?.moodle_username && (
-                      <p className="text-xs text-amber-500">
-                        (El nombre de usuario exacto se muestra al iniciar sesión en Moodle)
-                      </p>
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs text-amber-500">
+                          {checkingMoodle ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Verificando cuenta de Moodle...
+                            </span>
+                          ) : (
+                            "(El nombre de usuario se mostrará al iniciar sesión en Moodle)"
+                          )}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-fit flex items-center gap-2"
+                          onClick={retryMoodleIntegration}
+                          disabled={retryingMoodle || checkingMoodle}
+                        >
+                          {retryingMoodle ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4" />
+                          )}
+                          Reintentar integración con Moodle
+                        </Button>
+                      </div>
                     )}
                     <p className="text-sm">
                       <span className="font-medium">Contraseña:</span> La misma que utilizas para acceder a eduX
@@ -507,9 +664,31 @@ export default function DashboardPage() {
                   ) : (
                     <div>
                       <p className="text-muted-foreground">No disponible</p>
-                      <p className="text-xs text-amber-500 mt-1">
-                        (El nombre de usuario se mostrará al iniciar sesión en Moodle)
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-amber-500">
+                          {checkingMoodle ? (
+                            <span className="flex items-center gap-1">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Verificando cuenta de Moodle...
+                            </span>
+                          ) : (
+                            "(El nombre de usuario se mostrará al iniciar sesión en Moodle)"
+                          )}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 flex items-center gap-1 text-xs"
+                          onClick={retryMoodleIntegration}
+                          disabled={retryingMoodle || checkingMoodle}
+                        >
+                          {retryingMoodle ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Reintentar
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -567,3 +746,4 @@ export default function DashboardPage() {
     </div>
   )
 }
+

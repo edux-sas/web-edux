@@ -6,7 +6,7 @@ import type { MoodleUserData } from "@/lib/moodle-api"
  */
 export async function createMoodleUser(
   userData: MoodleUserData,
-): Promise<{ success: boolean; error?: string; data?: any; username?: string }> {
+): Promise<{ success: boolean; error?: string; data?: any; username?: string; status?: string; message?: string }> {
   try {
     // Añadir log para depuración
     console.log("Iniciando creación de usuario en Moodle")
@@ -17,6 +17,17 @@ export async function createMoodleUser(
     console.log("Procesado resultado de createMoodleUserAPI")
 
     // Asegurarnos de que el nombre de usuario se está devolviendo correctamente
+    if (
+      result.message === "Proceso de integración con Moodle iniciado. Los datos de acceso estarán disponibles en breve."
+    ) {
+      return {
+        success: true,
+        status: "pending",
+        message: "Proceso de integración con Moodle iniciado. Los datos de acceso estarán disponibles en breve.",
+        username: userData.username,
+      }
+    }
+
     return {
       success: result.success,
       data: result.data,
@@ -28,3 +39,4 @@ export async function createMoodleUser(
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" }
   }
 }
+

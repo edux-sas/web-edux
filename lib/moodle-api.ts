@@ -52,6 +52,7 @@ export async function enrollUserInCourse(userId: number, courseId: number): Prom
     url.searchParams.append("enrolments[0][courseid]", courseId.toString())
 
     console.log(`Preparando inscripción de usuario ${userId} en curso ${courseId}`)
+    console.log(`URL completa: ${url.toString()}`)
 
     // Hacer la solicitud GET
     const response = await axios.get(url.toString())
@@ -117,6 +118,8 @@ export async function getCoursesByCategory(categoryId: number): Promise<MoodleRe
     url.searchParams.append("moodlewsrestformat", "json")
     url.searchParams.append("field", "category")
     url.searchParams.append("value", categoryId.toString())
+
+    console.log(`URL completa: ${url.toString()}`)
 
     // Hacer la solicitud GET
     const response = await axios.get(url.toString())
@@ -272,31 +275,34 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
     console.log(`URL de Moodle: ${MOODLE_URL}`)
     console.log(`Token de Moodle disponible: ${MOODLE_TOKEN ? "Sí" : "No"}`)
 
-    // Construir la URL con los parámetros como query string
-    const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
+    // Construir los datos para la solicitud POST
+    const postData = {
+      wstoken: MOODLE_TOKEN,
+      wsfunction: "core_user_create_users",
+      moodlewsrestformat: "json",
+      users: [
+        {
+          username: userData.username,
+          password: userData.password,
+          firstname: userData.firstname,
+          lastname: lastname,
+          email: userData.email,
+          city: userData.city || "Ciudad",
+          country: userData.country || "CO",
+          auth: "manual",
+          lang: "es",
+        },
+      ],
+    }
 
-    // Añadir parámetros básicos
-    url.searchParams.append("wstoken", MOODLE_TOKEN)
-    url.searchParams.append("wsfunction", "core_user_create_users")
-    url.searchParams.append("moodlewsrestformat", "json")
+    console.log("Preparando solicitud POST para crear usuario en Moodle")
+    console.log(`URL: ${MOODLE_URL}/webservice/rest/server.php`)
+    console.log("Datos de la solicitud:", JSON.stringify(postData, null, 2))
 
-    // Añadir datos del usuario
-    url.searchParams.append("users[0][username]", userData.username)
-    url.searchParams.append("users[0][password]", userData.password)
-    url.searchParams.append("users[0][firstname]", userData.firstname)
-    url.searchParams.append("users[0][lastname]", lastname)
-    url.searchParams.append("users[0][email]", userData.email)
-    url.searchParams.append("users[0][city]", userData.city || "Ciudad")
-    url.searchParams.append("users[0][country]", userData.country || "CO")
-    url.searchParams.append("users[0][auth]", "manual")
-    url.searchParams.append("users[0][lang]", "es")
-
-    console.log("Preparando solicitud para crear usuario en Moodle")
-    console.log(`URL completa: ${url.toString()}`)
-
-    // Hacer la solicitud GET en lugar de POST
-    // Algunas versiones de Moodle funcionan mejor con GET para esta operación
-    const response = await axios.get(url.toString())
+    // Hacer la solicitud POST en lugar de GET
+    const response = await axios.post(`${MOODLE_URL}/webservice/rest/server.php`, null, {
+      params: postData,
+    })
 
     console.log("Respuesta recibida de Moodle:", response.status)
     console.log("Datos de respuesta:", JSON.stringify(response.data).substring(0, 200) + "...")
@@ -418,6 +424,9 @@ export async function getMoodleUserByEmail(email: string): Promise<MoodleRespons
     url.searchParams.append("field", "email")
     url.searchParams.append("values[0]", email)
 
+    console.log(`Buscando usuario en Moodle por email: ${email}`)
+    console.log(`URL completa: ${url.toString()}`)
+
     // Hacer la solicitud GET
     const response = await axios.get(url.toString())
 
@@ -483,6 +492,8 @@ export async function testMoodleConnection(): Promise<MoodleResponse<any>> {
     url.searchParams.append("wstoken", MOODLE_TOKEN)
     url.searchParams.append("wsfunction", "core_webservice_get_site_info")
     url.searchParams.append("moodlewsrestformat", "json")
+
+    console.log(`Probando conexión con Moodle: ${url.toString()}`)
 
     // Hacer la solicitud GET
     const response = await axios.get(url.toString())

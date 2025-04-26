@@ -161,70 +161,48 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Transacción de pago registrada para el usuario ${authData.user.id}`)
     }
 
-    // 4. Registrar usuario en Moodle si está habilitado
-    let moodleResult = { success: true, message: "Integración con Moodle desactivada" }
-    let moodleUsername = null // Variable para almacenar el nombre de usuario de Moodle
-    let enrollmentResults = null // Variable para almacenar los resultados de inscripción
+    // 4. Manejar la integración con Moodle de manera asíncrona
+    // En lugar de esperar a que se complete, iniciamos el proceso y devolvemos la respuesta
+    let moodleIntegrationStarted = false
 
     if (process.env.ENABLE_MOODLE_INTEGRATION === "true") {
-      try {
-        // Extraer nombre y apellido del nombre completo
-        const nameParts = userData.name.split(" ")
-        const firstname = nameParts[0]
-        const lastname = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "-"
+      moodleIntegrationStarted = true
 
-        // Generar un nombre de usuario único basado en el email
-        const username = email.split("@")[0] + Math.floor(Math.random() * 1000)
+      // Extraer nombre y apellido del nombre completo
+      const nameParts = userData.name.split(" ")
+      const firstname = nameParts[0]
+      const lastname = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "-"
 
-        console.log(`Intentando crear usuario en Moodle con los siguientes datos:`, {
-          username,
-          firstname,
-          lastname,
-          email,
-        })
+      // Generar un nombre de usuario único basado en el email
+      const username = email.split("@")[0] + Math.floor(Math.random() * 1000)
 
-        // Crear usuario en Moodle e inscribirlo automáticamente en los cursos de la categoría 2
-        const moodleResponse = await createMoodleUser({
-          username,
-          password,
-          firstname,
-          lastname,
-          email,
-        })
+      console.log(`Iniciando proceso asíncrono para crear usuario en Moodle con los siguientes datos:`, {
+        username,
+        firstname,
+        lastname,
+        email,
+      })
 
-        if (!moodleResponse.success) {
-          console.warn("Usuario creado en Supabase pero falló en Moodle:", moodleResponse.error)
-          moodleResult = {
-            success: false,
-            message: `Usuario creado en Supabase pero falló en Moodle: ${moodleResponse.error}`,
-          }
-        } else {
-          moodleUsername = moodleResponse.username // Guardar el nombre de usuario de Moodle
-
-          // Obtener los resultados de inscripción
-          const enrollmentData = moodleResponse.data?.enrollments || []
-
-          // Guardar información sobre la inscripción
-          enrollmentResults = enrollmentData
-
-          moodleResult = {
-            success: true,
-            message: `Usuario creado correctamente en Supabase y Moodle e inscrito en cursos de Formación DISC`,
-            enrollments: enrollmentResults,
+      // Iniciar el proceso de creación de usuario en Moodle sin esperar a que termine
+      // Esto evitará el timeout de la función
+      createMoodleUser({
+        username,
+        password,
+        firstname,
+        lastname,
+        email,
+      })
+        .then(async (moodleResponse) => {
+          if (!moodleResponse.success) {
+            console.warn("Usuario creado en Supabase pero falló en Moodle:", moodleResponse.error)
+            return
           }
 
-          // Registrar información adicional para depuración
-          console.log("✅ MOODLE: Usuario creado exitosamente", {
-            email,
-            username,
-            firstname,
-            lastname,
-            moodleData: moodleResponse.data,
-          })
+          const moodleUsername = moodleResponse.username
 
           // Actualizar el usuario en Supabase con el nombre de usuario de Moodle
           if (moodleUsername) {
-            console.log(`Intentando guardar moodle_username '${moodleUsername}' para el usuario ${authData.user.id}`)
+            console.log(`Actualizando moodle_username '${moodleUsername}' para el usuario ${authData.user.id}`)
 
             // Actualizar en la tabla users
             const { error: updateError } = await supabaseAdmin
@@ -250,25 +228,23 @@ export async function POST(request: NextRequest) {
               console.log(`✅ Moodle username '${moodleUsername}' guardado en los metadatos del usuario`)
             }
           }
-        }
-      } catch (moodleError) {
-        console.error("Error al registrar en Moodle:", moodleError)
-        moodleResult = {
-          success: false,
-          message: `Error al registrar en Moodle: ${moodleError instanceof Error ? moodleError.message : "Error desconocido"}`,
-        }
-      }
+        })
+        .catch((error) => {
+          console.error("Error en el proceso asíncrono de Moodle:", error)
+        })
     } else {
       console.log("⚠️ MOODLE: Integración desactivada. Configure ENABLE_MOODLE_INTEGRATION=true para activarla.")
     }
 
+    // Devolver respuesta exitosa inmediatamente sin esperar a Moodle
     return NextResponse.json({
       success: true,
       user: authData.user,
       moodle: {
-        ...moodleResult,
-        username: moodleUsername, // Incluir el nombre de usuario de Moodle en la respuesta
-        enrollments: enrollmentResults, // Incluir resultados de inscripción en la respuesta
+        integrationStarted: moodleIntegrationStarted,
+        message: moodleIntegrationStarted
+          ? "Proceso de integración con Moodle iniciado. Los datos de acceso estarán disponibles en breve."
+          : "Integración con Moodle desactivada",
       },
     })
   } catch (error) {

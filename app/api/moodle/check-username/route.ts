@@ -3,23 +3,18 @@ import { createClient } from "@supabase/supabase-js"
 
 // Configuración de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+
+// Crear cliente de Supabase con la clave de servicio
+const supabaseAdmin =
+  supabaseUrl && supabaseServiceKey
+    ? createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+    : null
 
 export async function GET(request: NextRequest) {
   try {
-    // Verificar si el cliente de Supabase existe
-    if (!supabase) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "No se ha configurado la conexión con Supabase",
-        },
-        { status: 500 },
-      )
-    }
-
-    // Obtener el userId de los parámetros de consulta
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 
@@ -27,14 +22,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Falta el parámetro userId",
+          error: "Se requiere el parámetro userId",
         },
         { status: 400 },
       )
     }
 
-    // Consultar la tabla users para obtener el moodle_username
-    const { data, error } = await supabase
+    if (!supabaseAdmin) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No se pudo crear el cliente Supabase Admin",
+        },
+        { status: 500 },
+      )
+    }
+
+    // Consultar la tabla users para obtener el nombre de usuario de Moodle
+    const { data, error } = await supabaseAdmin
       .schema("api")
       .from("users")
       .select("moodle_username")
@@ -42,7 +47,7 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error("Error al consultar moodle_username:", error)
+      console.error("Error al consultar el nombre de usuario de Moodle:", error)
       return NextResponse.json(
         {
           success: false,
@@ -52,21 +57,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Verificar si el usuario tiene un moodle_username
-    if (data && data.moodle_username) {
+    if (!data || !data.moodle_username) {
       return NextResponse.json({
-        success: true,
-        moodleUsername: data.moodle_username,
+        success: false,
+        message: "El usuario no tiene un nombre de usuario de Moodle",
       })
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "El usuario aún no tiene un nombre de usuario de Moodle",
-        },
-        { status: 404 },
-      )
     }
+
+    return NextResponse.json({
+      success: true,
+      moodleUsername: data.moodle_username,
+    })
   } catch (error) {
     console.error("Error al verificar nombre de usuario de Moodle:", error)
     return NextResponse.json(
@@ -78,3 +79,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

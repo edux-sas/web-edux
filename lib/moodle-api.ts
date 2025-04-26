@@ -268,9 +268,11 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
     const lastname = userData.lastname || "-"
 
     console.log("Iniciando creación de usuario en Moodle...")
+    console.log(`Datos de usuario: ${userData.username}, ${userData.firstname}, ${userData.email}`)
+    console.log(`URL de Moodle: ${MOODLE_URL}`)
+    console.log(`Token de Moodle disponible: ${MOODLE_TOKEN ? "Sí" : "No"}`)
 
     // Construir la URL con los parámetros como query string
-    // Este enfoque funciona mejor con algunas versiones de Moodle
     const url = new URL(`${MOODLE_URL}/webservice/rest/server.php`)
 
     // Añadir parámetros básicos
@@ -290,10 +292,14 @@ export async function createMoodleUser(userData: MoodleUserData): Promise<Moodle
     url.searchParams.append("users[0][lang]", "es")
 
     console.log("Preparando solicitud para crear usuario en Moodle")
+    console.log(`URL completa: ${url.toString()}`)
 
     // Hacer la solicitud GET en lugar de POST
     // Algunas versiones de Moodle funcionan mejor con GET para esta operación
     const response = await axios.get(url.toString())
+
+    console.log("Respuesta recibida de Moodle:", response.status)
+    console.log("Datos de respuesta:", JSON.stringify(response.data).substring(0, 200) + "...")
 
     const result = response.data
 

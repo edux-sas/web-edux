@@ -1,4 +1,4 @@
-import { createMoodleUser } from "@/lib/moodle"
+import { createMoodleUser, getMoodleUserByEmail } from "@/lib/moodle-api"
 import { createClient } from "@supabase/supabase-js"
 
 // Configuración de Supabase
@@ -21,6 +21,8 @@ async function updateMoodleUsername(userId: string, moodleUsername: string) {
   }
 
   try {
+    console.log(`Actualizando moodle_username '${moodleUsername}' para el usuario ${userId}`)
+
     // Actualizar en la tabla users
     const { error: updateError } = await supabaseAdmin
       .schema("api")
@@ -33,6 +35,8 @@ async function updateMoodleUsername(userId: string, moodleUsername: string) {
       return false
     }
 
+    console.log(`✅ Moodle username '${moodleUsername}' guardado en la tabla users`)
+
     // También actualizar los metadatos del usuario
     const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       user_metadata: { moodle_username: moodleUsername },
@@ -43,11 +47,26 @@ async function updateMoodleUsername(userId: string, moodleUsername: string) {
       return false
     }
 
-    console.log(`✅ Moodle username '${moodleUsername}' guardado para el usuario ${userId}`)
+    console.log(`✅ Moodle username '${moodleUsername}' guardado en los metadatos del usuario`)
     return true
   } catch (error) {
     console.error("Error al actualizar nombre de usuario de Moodle:", error)
     return false
+  }
+}
+
+// Función para verificar si el usuario ya existe en Moodle
+async function checkExistingMoodleUser(email: string): Promise<string | null> {
+  try {
+    const response = await getMoodleUserByEmail(email)
+    if (response.success && response.username) {
+      console.log(`✅ Usuario de Moodle encontrado para ${email}: ${response.username}`)
+      return response.username
+    }
+    return null
+  } catch (error) {
+    console.error("Error al verificar usuario existente en Moodle:", error)
+    return null
   }
 }
 
@@ -67,13 +86,40 @@ export async function createMoodleUserWithRetry({
   maxRetries?: number
   delayBetweenRetries?: number
 }) {
+  // Primero verificar si el usuario ya existe en Moodle
+  console.log(`Verificando si el usuario ${email} ya existe en Moodle...`)
+  const existingUsername = await checkExistingMoodleUser(email)
+
+  if (existingUsername) {
+    console.log(`Usuario ya existe en Moodle con username: ${existingUsername}`)
+    // Actualizar el nombre de usuario en Supabase
+    const updateSuccess = await updateMoodleUsername(userId, existingUsername)
+
+    if (updateSuccess) {
+      return {
+        success: true,
+        username: existingUsername,
+        message: "Usuario existente en Moodle actualizado en Supabase",
+      }
+    } else {
+      return {
+        success: true,
+        username: existingUsername,
+        message: "Usuario existente en Moodle pero no se pudo actualizar en Supabase",
+      }
+    }
+  }
+
   // Extraer nombre y apellido
   const nameParts = name.split(" ")
   const firstname = nameParts[0]
   const lastname = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "-"
 
   // Generar un nombre de usuario único basado en el email
-  const usernameBase = email.split("@")[0]
+  const usernameBase = email
+    .split("@")[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
 
   let attempt = 0
   let success = false

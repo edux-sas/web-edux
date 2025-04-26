@@ -1,11 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createMoodleUserWithRetry } from "@/lib/moodle-retry-service"
-import { createClient } from "@supabase/supabase-js"
-
-// Configuración de Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabase = supabaseUrl ? createClient(supabaseUrl, supabaseAnonKey) : null
 
 export async function POST(request: NextRequest) {
   try {

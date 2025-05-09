@@ -24,10 +24,12 @@ import {
   CheckCircle,
   Loader2,
   RefreshCw,
+  AlertCircle,
 } from "lucide-react"
 import { getCurrentUser, getDiscResults, getUserData } from "@/lib/supabase"
 import { getTimeUntilNextTest, formatTimeRemaining } from "@/lib/disc-utils"
 import { useToast } from "@/components/ui/use-toast"
+import { motion, AnimatePresence } from "framer-motion"
 
 type UserData = {
   id?: string
@@ -60,6 +62,7 @@ export default function DashboardPage() {
   const [checkingMoodle, setCheckingMoodle] = useState(false)
   const [moodleCheckInterval, setMoodleCheckInterval] = useState<NodeJS.Timeout | null>(null)
   const [retryingMoodle, setRetryingMoodle] = useState(false)
+  const [showCourseGuide, setShowCourseGuide] = useState(true)
 
   // Función para verificar el nombre de usuario de Moodle
   const checkMoodleUsername = async (userId: string) => {
@@ -334,6 +337,8 @@ export default function DashboardPage() {
     }
   }, [router, toast])
 
+  // Mostrar guía de cursos por unos segundos
+
   // Función para copiar el nombre de usuario de Moodle al portapapeles
   const copyMoodleUsername = () => {
     if (user?.moodle_username) {
@@ -396,7 +401,11 @@ export default function DashboardPage() {
               <span className="hidden sm:inline">Test DISC</span>
               <span className="sm:hidden">DISC</span>
             </TabsTrigger>
-            <TabsTrigger value="courses" className="flex items-center gap-2">
+            <TabsTrigger
+              value="courses"
+              className={`flex items-center gap-2 ${showCourseGuide ? "relative animate-pulse after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary" : ""}`}
+              onClick={() => setShowCourseGuide(false)}
+            >
               <GraduationCap className="h-4 w-4" />
               <span className="hidden sm:inline">Cursos</span>
               <span className="sm:hidden">Cursos</span>
@@ -407,6 +416,21 @@ export default function DashboardPage() {
               <span className="sm:hidden">Perfil</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Guía visual para la pestaña de cursos */}
+          <AnimatePresence>
+            {showCourseGuide && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-2 mb-1 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md flex items-center gap-2 text-sm"
+              >
+                <AlertCircle className="h-4 w-4 text-blue-500" />
+                <span>Haz clic en "Cursos" para acceder a tu plataforma de aprendizaje </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <TabsContent value="disc" className="space-y-6">
             {discResults ? (
@@ -555,7 +579,7 @@ export default function DashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Mis Cursos</CardTitle>
-                <CardDescription>Accede a tu plataforma de aprendizaje Moodle</CardDescription>
+                <CardDescription>Accede a tu plataforma de aprendizaje</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-muted/30 p-4 rounded-lg">
@@ -626,7 +650,7 @@ export default function DashboardPage() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Acceder a Moodle
+                    Acceder al campus
                   </a>
                 </Button>
               </CardFooter>

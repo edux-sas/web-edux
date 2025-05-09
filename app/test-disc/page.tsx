@@ -93,7 +93,9 @@ export default function TestDiscPage() {
         {plans.map((plan) => (
           <Card key={plan.id} className={`flex flex-col ${plan.popular ? "border-primary shadow-lg" : ""}`}>
             {plan.popular && (
-              <div className="bg-primary text-primary-foreground text-center py-2 text-sm font-medium">Más Popular</div>
+              <div className="bg-primary text-primary-foreground text-center py-2 text-sm font-medium rounded-t-lg overflow-hidden">
+                Más Popular
+              </div>
             )}
             <CardHeader className="p-6">
               <CardTitle>{plan.name}</CardTitle>

@@ -42,7 +42,7 @@ export default function DiscTestPromo() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-lg opacity-20 blur-3xl"></div>
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <img
-                  src="/images/discover-profile.png"
+                  src="/images/discover-profile.webp"
                   alt="Persona descubriendo su perfil DISC en eduX"
                   className="object-cover rounded-lg shadow-xl"
                   width={550}

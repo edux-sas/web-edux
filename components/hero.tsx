@@ -35,7 +35,7 @@ export default function Hero() {
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-lg opacity-20 blur-3xl"></div>
               <div className="relative z-10 w-full h-full flex items-center justify-center">
                 <Image
-                  src="/images/edux-building-transparent.png"
+                  src="/images/edux-building-transparent.webp"
                   alt="eduX - Edificio educativo digital"
                   className="object-contain w-full h-full"
                   width={550}

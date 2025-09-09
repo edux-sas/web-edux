@@ -48,7 +48,7 @@ const FROM_EMAIL = "soporte@edux.com.co"
 const FROM_NAME = "eduX"
 
 // Dirección de correo para recibir copias de los formularios
-const ADMIN_EMAIL = "soporte@edux.com.co"
+const ADMIN_EMAIL = "gerencia@edux.digital"
 
 // Función para enviar correo de confirmación al usuario
 export async function sendContactConfirmation(name: string, email: string, subject: string, message: string) {

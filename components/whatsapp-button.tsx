@@ -14,7 +14,7 @@ export function WhatsAppButton({ phoneNumber = "+573171165904" }: WhatsAppButton
   }
 
   useEffect(() => {
-    // Cargar Font Awesome si no está disponible
+    // Cargar Font Awesome si no está disponibl
     if (!document.querySelector('link[href*="font-awesome"]')) {
       const link = document.createElement('link')
       link.rel = 'stylesheet'

@@ -1,28 +1,21 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
-import { CheckCircle, AlertCircle, GraduationCap, Copy } from "lucide-react"
+import { CheckCircle2, AlertCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function SuccessPage() {
+  const searchParams = useSearchParams()
   const router = useRouter()
-  const { toast } = useToast()
-  const [moodleStatus, setMoodleStatus] = useState<{
-    success: boolean
-    message: string
-    username?: string
-    enrollments?: Array<{
-      courseId: number
-      courseName: string
-      success: boolean
-      error?: string
-    }>
-  } | null>(null)
-  const [copied, setCopied] = useState(false)
+  const [productName, setProductName] = useState("")
+  const [purchaseDate, setPurchaseDate] = useState("")
+  const [transactionId, setTransactionId] = useState("")
+  const [moodleError, setMoodleError] = useState(false)
+  const [showMoodleError, setShowMoodleError] = useState(false)
 
   useEffect(() => {
     // Intentar obtener el estado de la sincronización con Moodle desde localStorage
@@ -50,136 +43,79 @@ export default function SuccessPage() {
         console.error("Error al parsear el estado de Moodle:", e)
       }
     }
-  }, [])
 
-  // Función para copiar el nombre de usuario de Moodle al portapapeles
-  const copyMoodleUsername = () => {
-    if (moodleStatus?.username) {
-      navigator.clipboard.writeText(moodleStatus.username)
-      setCopied(true)
-      toast({
-        title: "Nombre de usuario copiado",
-        description: "El nombre de usuario de Moodle ha sido copiado al portapapeles",
-      })
-
-      // Restablecer el estado después de 2 segundos
-      setTimeout(() => {
-        setCopied(false)
-      }, 2000)
-    }
-  }
+    // Obtener el parámetro moodleError
+    const moodleErrorParam = searchParams.get("moodleError")
+    setMoodleError(moodleErrorParam === "true")
+  }, [searchParams])
 
   return (
-    <div className="container py-12 max-w-md">
-      <Card className="text-center">
-        <CardHeader>
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-          </div>
-          <CardTitle className="text-2xl">¡Pago Exitoso!</CardTitle>
-          <CardDescription>Tu compra del Test DISC ha sido procesada correctamente</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="mb-4">
-            Hemos creado tu cuenta con los datos proporcionados. Ya puedes acceder a tu test DISC y a todos los
-            beneficios de tu plan.
-          </p>
-          <div className="bg-muted p-4 rounded-md text-left mb-4">
-            <p className="font-medium">Detalles de la compra:</p>
-            <ul className="mt-2 space-y-1 text-sm">
-              <li>
-                <span className="text-muted-foreground">Producto:</span> Test DISC Profesional
-              </li>
-              <li>
-                <span className="text-muted-foreground">Fecha:</span> {new Date().toLocaleDateString()}
-              </li>
-              <li>
-                <span className="text-muted-foreground">ID de Transacción:</span> TRX-
-                {Math.random().toString(36).substring(2, 10).toUpperCase()}
-              </li>
-            </ul>
-          </div>
-
-          {/* Mostrar estado de Moodle si está disponible */}
-          {moodleStatus && (
-            <div
-              className={`p-3 rounded-md text-sm mb-4 ${moodleStatus.success ? "bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300" : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"}`}
-            >
-              <div className="flex items-start gap-2">
-                {moodleStatus.success ? (
-                  <CheckCircle className="h-5 w-5 text-green-500 dark:text-green-400 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="h-5 w-5 text-amber-500 dark:text-amber-400 shrink-0 mt-0.5" />
-                )}
-                <div>
-                  <p>
-                    {moodleStatus.success
-                      ? "Tu cuenta de la plataforma de cursos ha sido creada correctamente."
-                      : "Tu cuenta ha sido creada, pero hubo un problema con la plataforma de cursos. Nuestro equipo lo resolverá pronto."}
-                  </p>
-                  {moodleStatus?.username && (
-                    <div className="mt-2">
-                      <p className="font-medium mb-1">Tu nombre de usuario para la plataforma Moodle es:</p>
-                      <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-2 rounded">
-                        <code className="text-primary font-mono">{moodleStatus.username}</code>
-                        <button
-                          onClick={copyMoodleUsername}
-                          className="p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
-                          title="Copiar nombre de usuario"
-                        >
-                          {copied ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4 text-gray-500" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs mt-1">
-                        Guarda este nombre de usuario. Lo necesitarás para acceder a tus cursos.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="max-w-2xl w-full space-y-6">
+        <div className="rounded-full bg-green-100 dark:bg-green-900 p-6 mb-6 relative">
+          <CheckCircle2 className="w-16 h-16 text-green-600 dark:text-green-400 mx-auto" />
+          {moodleError && (
+            <div className="absolute top-2 right-2">
+              <AlertCircle 
+                className="h-6 w-6 text-yellow-600 cursor-pointer hover:text-yellow-700 transition-colors" 
+                onClick={() => setShowMoodleError(!showMoodleError)}
+                title="Hay un problema con la plataforma de cursos"
+              />
             </div>
           )}
+        </div>
+        
+        <h1 className="text-3xl font-bold text-center mb-4">¡Pago Exitoso!</h1>
+        <p className="text-center text-muted-foreground mb-8">
+          Tu compra del Test DISC ha sido procesada correctamente
+        </p>
 
-          {/* Mostrar información sobre cursos inscritos */}
-          {moodleStatus?.enrollments && moodleStatus.enrollments.length > 0 && (
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md text-sm mb-4 text-blue-700 dark:text-blue-300">
-              <div className="flex items-start gap-2">
-                <GraduationCap className="h-5 w-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">¡Has sido inscrito automáticamente en los siguientes cursos!</p>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {moodleStatus.enrollments.map((enrollment, index) => (
-                      <li key={index} className="flex items-center gap-1">
-                        {enrollment.success ? (
-                          <CheckCircle className="h-3 w-3 text-green-500 dark:text-green-400 shrink-0" />
-                        ) : (
-                          <AlertCircle className="h-3 w-3 text-amber-500 dark:text-amber-400 shrink-0" />
-                        )}
-                        <span>{enrollment.courseName}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2">
-                    Puedes acceder a estos cursos desde tu dashboard o directamente en la plataforma Moodle.
-                  </p>
-                </div>
-              </div>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              Tu cuenta ha sido creada
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Hemos creado tu cuenta con los datos proporcionados. Ya puedes acceder a tu test DISC y a todos los beneficios de tu plan.
+            </p>
+            
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Producto:</span>
+              <span className="font-medium">{productName}</span>
             </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
-          <Button asChild className="w-full">
-            <Link href="/test-disc/start">Comenzar Test DISC</Link>
+            <div className="flex justify-between py-2 border-b">
+              <span className="text-muted-foreground">Fecha:</span>
+              <span className="font-medium">{purchaseDate}</span>
+            </div>
+            <div className="flex justify-between py-2">
+              <span className="text-muted-foreground">ID de Transacción:</span>
+              <span className="font-medium">{transactionId}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {moodleError && showMoodleError && (
+          <Alert variant="default" className="mb-6 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800 dark:text-yellow-200">Información Importante</AlertTitle>
+            <AlertDescription className="text-yellow-700 dark:text-yellow-300">
+              Tu cuenta ha sido creada, pero hubo un problema con la plataforma de cursos. Nuestro equipo lo resolverá pronto.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex gap-4">
+          <Button onClick={() => router.push("/test-disc/start")} className="flex-1">
+            Comenzar Test DISC
           </Button>
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/dashboard">Ir al Dashboard</Link>
+          <Button onClick={() => router.push("/dashboard")} variant="outline" className="flex-1">
+            Ir al Dashboard
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

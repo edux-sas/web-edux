@@ -2,13 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import Link from "next/link"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, AlertCircle } from "lucide-react"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/components/ui/use-toast"
+import { useEffect, useState, Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [productName, setProductName] = useState("")
@@ -18,34 +17,15 @@ export default function SuccessPage() {
   const [showMoodleError, setShowMoodleError] = useState(false)
 
   useEffect(() => {
-    // Intentar obtener el estado de la sincronización con Moodle desde localStorage
-    const storedMoodleStatus = localStorage.getItem("moodleRegistrationStatus")
-
-    if (storedMoodleStatus) {
-      try {
-        const parsedStatus = JSON.parse(storedMoodleStatus)
-        setMoodleStatus(parsedStatus)
-
-        // Mostrar en consola el estado de la creación del usuario en Moodle
-        if (parsedStatus.success) {
-          console.log("✅ Usuario creado correctamente en Moodle:", parsedStatus.message)
-
-          // Si hay un nombre de usuario de Moodle, actualizarlo en el usuario actual
-          if (parsedStatus.username) {
-            const userData = JSON.parse(localStorage.getItem("eduXUser") || "{}")
-            userData.moodle_username = parsedStatus.username
-            localStorage.setItem("eduXUser", JSON.stringify(userData))
-          }
-        } else {
-          console.error("❌ Error al crear usuario en Moodle:", parsedStatus.message)
-        }
-      } catch (e) {
-        console.error("Error al parsear el estado de Moodle:", e)
-      }
-    }
-
     // Obtener el parámetro moodleError
+    const product = searchParams.get("product") || "Test DISC Profesional"
+    const date = searchParams.get("date") || new Date().toLocaleDateString()
+    const txId = searchParams.get("transactionId") || "N/A"
     const moodleErrorParam = searchParams.get("moodleError")
+    
+    setProductName(product)
+    setPurchaseDate(date)
+    setTransactionId(txId)
     setMoodleError(moodleErrorParam === "true")
   }, [searchParams])
 
@@ -117,5 +97,17 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">Cargando...</div>
+      </div>
+    }>
+      <SuccessPageContent />
+    </Suspense>
   )
 }

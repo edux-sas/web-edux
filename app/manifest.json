@@ -1,0 +1,40 @@
+{
+  "name": "eduX ",
+  "short_name": "eduX",
+  "description": "Soluciones integrales en software a la medida, educación virtual y desarrollo de habilidades blandas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00a5e9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "type": "image/png",
+      "sizes": "180x180"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "lang": "es-ES",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "business"],
+  "screenshots": []
+}
